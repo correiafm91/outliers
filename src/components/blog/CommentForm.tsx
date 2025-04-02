@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CommentFormProps {
   postId: string;
@@ -18,8 +21,11 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [username, setUsername] = useState("");
+  const [sector, setSector] = useState("other");
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  const { user, profile } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -33,53 +39,109 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
     }
   };
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // This will be replaced with Supabase implementation
-    console.log("Profile created", { username, profileImage });
-    setDialogOpen(false);
-    toast.success("Profile created successfully!");
+    setIsSubmitting(true);
+
+    try {
+      if (!user) throw new Error("Você precisa estar logado");
+      
+      // Upload profile image if provided
+      let avatar_url = null;
+      if (profileImage) {
+        const fileExt = profileImage.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random().toString(36).substring(2)}`;
+        const filePath = `${fileName}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, profileImage);
+          
+        if (uploadError) throw uploadError;
+        
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+        avatar_url = data.publicUrl;
+      }
+      
+      // Update profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          username: username,
+          sector: sector,
+          ...(avatar_url && { avatar_url: avatar_url })
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      setDialogOpen(false);
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar perfil");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
     
     setIsSubmitting(true);
     
-    // This is a placeholder - will be replaced with Supabase
-    console.log("Submitting comment for post", postId, comment);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (!user) throw new Error("Você precisa estar logado");
+      
+      const { error } = await supabase
+        .from('comments')
+        .insert([
+          { 
+            article_id: postId,
+            author_id: user.id,
+            content: comment
+          }
+        ]);
+        
+      if (error) throw error;
+      
       setComment("");
-      setIsSubmitting(false);
       if (onCommentAdded) onCommentAdded();
-      toast.success("Comment posted successfully!");
-    }, 1000);
+      toast.success("Comentário publicado com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao publicar comentário");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Placeholder - will be replaced with Supabase auth
-  const user = {
-    name: "Guest",
-    image: null
-  };
-  
-  const hasProfile = !!user.name && user.name !== "Guest";
+  const sectors = [
+    { value: "technology", label: "Tecnologia" },
+    { value: "marketing", label: "Marketing" },
+    { value: "gastronomy", label: "Gastronomia" },
+    { value: "education", label: "Educação" },
+    { value: "finance", label: "Finanças" },
+    { value: "health", label: "Saúde" },
+    { value: "sports", label: "Esportes" },
+    { value: "entertainment", label: "Entretenimento" },
+    { value: "other", label: "Outro" }
+  ];
+
+  const hasProfile = !!profile;
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h3 className="heading-sm">Leave a comment</h3>
+      <h3 className="heading-sm">Deixe um comentário</h3>
       
       {hasProfile ? (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex items-start gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={user.image || ""} alt={user.name} />
-              <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+              <AvatarImage src={profile?.avatar_url || ""} alt={profile?.username} />
+              <AvatarFallback>{profile?.username?.slice(0, 2) || "U"}</AvatarFallback>
             </Avatar>
             <Textarea
-              placeholder="Share your thoughts..."
+              placeholder="Compartilhe seus pensamentos..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className="flex-1 resize-none"
@@ -87,43 +149,58 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting || !comment.trim()}>
-              {isSubmitting ? "Posting..." : "Post Comment"}
+              {isSubmitting ? "Postando..." : "Publicar Comentário"}
             </Button>
           </div>
         </form>
       ) : (
         <div className="flex flex-col items-center justify-center p-6 border border-dashed border-border rounded-md">
           <p className="text-muted-foreground mb-4 text-center">
-            You need to create a profile before commenting
+            Você precisa criar um perfil antes de comentar
           </p>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Create Profile</Button>
+              <Button>Criar Perfil</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create your profile</DialogTitle>
+                <DialogTitle>Crie seu perfil</DialogTitle>
                 <DialogDescription>
-                  Set up a username and profile picture to start commenting.
+                  Configure um nome de usuário e foto de perfil para começar a comentar.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleProfileSubmit}>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
+                    <Label htmlFor="username">Nome de usuário</Label>
                     <Input 
                       id="username" 
                       value={username} 
                       onChange={(e) => setUsername(e.target.value)} 
-                      placeholder="Choose a username"
+                      placeholder="Escolha um nome de usuário"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="profile-image">Profile Picture</Label>
+                    <Label htmlFor="sector">Setor</Label>
+                    <Select value={sector} onValueChange={setSector}>
+                      <SelectTrigger id="sector">
+                        <SelectValue placeholder="Selecione seu setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sectors.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-image">Foto de Perfil</Label>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-16 w-16">
-                        <AvatarImage src={previewUrl || ""} alt="Preview" />
+                        <AvatarImage src={previewUrl || ""} alt="Pré-visualização" />
                         <AvatarFallback>{username ? username.slice(0, 2) : "U"}</AvatarFallback>
                       </Avatar>
                       <Input 
@@ -137,7 +214,9 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={!username}>Save Profile</Button>
+                  <Button type="submit" disabled={!username || isSubmitting}>
+                    {isSubmitting ? "Salvando..." : "Salvar Perfil"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
