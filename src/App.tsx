@@ -10,6 +10,10 @@ import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import BlogsPage from "./pages/BlogsPage";
 import BlogDetailPage from "./pages/BlogDetailPage";
+import ProfilePage from "./pages/ProfilePage";
+import NewArticlePage from "./pages/NewArticlePage";
+import EditArticlePage from "./pages/EditArticlePage";
+import SearchPage from "./pages/SearchPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -90,6 +94,42 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <BlogDetailPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/profile/:id" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/new-article" 
+                element={
+                  <ProtectedRoute>
+                    <NewArticlePage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/edit-article/:id" 
+                element={
+                  <ProtectedRoute>
+                    <EditArticlePage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/search" 
+                element={
+                  <ProtectedRoute>
+                    <SearchPage />
                   </ProtectedRoute>
                 } 
               />

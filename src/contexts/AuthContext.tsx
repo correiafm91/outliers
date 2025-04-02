@@ -65,13 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Erro ao buscar perfil:", error);
         return;
       }
 
       setProfile(data);
     } catch (error) {
-      console.error("Error in fetchProfile:", error);
+      console.error("Erro em fetchProfile:", error);
     }
   };
 
