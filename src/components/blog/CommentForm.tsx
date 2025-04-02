@@ -49,17 +49,22 @@ export function CommentForm({ articleId, authorId, onCommentAdded }: CommentForm
 
       if (error) throw error;
 
-      // Create notification for the article author (if not self-commenting)
+      // Only try to create notification if the tables exist
       if (user.id !== authorId) {
-        await supabase
-          .from("notifications")
-          .insert({
-            user_id: authorId,
-            actor_id: user.id,
-            type: "comment",
-            article_id: articleId,
-            read: false
-          });
+        try {
+          await supabase
+            .from("notifications")
+            .insert({
+              user_id: authorId,
+              actor_id: user.id,
+              type: "comment",
+              article_id: articleId,
+              read: false
+            });
+        } catch (notifError) {
+          console.error("Erro ao criar notificação:", notifError);
+          // Continue with the comment process even if notification fails
+        }
       }
 
       // Reset form and refresh comments
