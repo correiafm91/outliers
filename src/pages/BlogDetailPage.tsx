@@ -3,145 +3,93 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { BlogPost } from "@/components/blog/BlogCard";
 import { CommentForm } from "@/components/blog/CommentForm";
 import { CommentList, Comment } from "@/components/blog/CommentList";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, BookmarkIcon } from "lucide-react";
+import { LikeButton } from "@/components/blog/LikeButton";
+import { SaveArticleButton } from "@/components/saved/SaveArticleButton";
+import { ShareButton } from "@/components/share/ShareButton";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { Article, Profile } from "@/types/profile";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [bookmarked, setBookmarked] = useState(false);
-  const [post, setPost] = useState<BlogPost | null>(null);
+  const [article, setArticle] = useState<Article | null>(null);
+  const [author, setAuthor] = useState<Profile | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // This is placeholder data - will be replaced with Supabase fetch
-    const mockPost: BlogPost = {
-      id: id || "1",
-      title: "The Future of AI in Business: Trends to Watch",
-      excerpt: "Artificial intelligence is reshaping how businesses operate. Here are the key trends to watch in the coming year.",
-      content: `
-        <p>Artificial intelligence (AI) continues to transform the business landscape at an unprecedented pace. As we move forward, businesses must adapt to these changes or risk being left behind. In this comprehensive analysis, we explore the most impactful AI trends that are reshaping industries worldwide.</p>
-        
-        <h2>Machine Learning Operations (MLOps)</h2>
-        <p>As organizations deploy more machine learning models, the need for effective MLOps becomes critical. MLOps brings DevOps principles to machine learning, streamlining the deployment, monitoring, and maintenance of AI systems. Companies that implement robust MLOps practices are seeing faster time-to-market and more reliable AI solutions.</p>
-        
-        <h2>AI Ethics and Governance</h2>
-        <p>With AI becoming more prevalent, ethical considerations are moving to the forefront. Businesses are establishing governance frameworks to ensure AI systems are fair, transparent, and unbiased. Regulatory bodies worldwide are also developing guidelines for responsible AI use.</p>
-        
-        <h2>Generative AI Revolution</h2>
-        <p>Generative AI tools like ChatGPT and DALL-E are creating new possibilities for content creation, product design, and creative work. Businesses across sectors are finding innovative applications for these technologies, from automated content production to design assistance.</p>
-        
-        <h2>AI-Enhanced Decision Making</h2>
-        <p>Executive teams are increasingly relying on AI-powered analytics to inform strategic decisions. These systems can process vast amounts of data and identify patterns that humans might miss, leading to more informed business choices.</p>
-        
-        <h2>The Future Outlook</h2>
-        <p>As AI technology continues to evolve, we expect to see more specialized applications across industries. Companies that invest in AI capabilities now will be better positioned to leverage these advancements in the future.</p>
-        
-        <p>For business leaders, staying informed about these trends isn't just about technological curiosity—it's about strategic necessity. The AI revolution is here, and its impact on business operations will only grow stronger in the years ahead.</p>
-      `,
-      author: {
-        name: "Alex Johnson",
-        avatar: "https://i.pravatar.cc/150?img=1"
-      },
-      published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-      category: "Technology",
-      image: "https://images.unsplash.com/photo-1593642533144-3d62aa4783ec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
-      likes: 128,
-      comments: 47
-    };
-
-    const mockComments: Comment[] = [
-      {
-        id: "c1",
-        author: {
-          name: "Jamie Smith",
-          avatar: "https://i.pravatar.cc/150?img=11"
-        },
-        content: "Really insightful article! I especially agree with the points about AI ethics and governance. As these technologies become more powerful, the ethical considerations become increasingly important.",
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-        likes: 8
-      },
-      {
-        id: "c2",
-        author: {
-          name: "Riley Chen",
-          avatar: "https://i.pravatar.cc/150?img=12"
-        },
-        content: "Great perspective on MLOps. In our organization, we've seen firsthand how implementing these practices has streamlined our AI deployment process. Definitely a must for any company serious about scaling their AI initiatives.",
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        likes: 15
-      },
-      {
-        id: "c3",
-        author: {
-          name: "Taylor Morgan",
-          avatar: "https://i.pravatar.cc/150?img=13"
-        },
-        content: "I'd be interested to hear more about how smaller businesses can start implementing some of these AI trends without massive budgets. Any thoughts on accessible entry points for AI adoption?",
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
-        likes: 6
-      }
-    ];
-
-    // Simulate API call
-    setTimeout(() => {
-      setPost(mockPost);
-      setComments(mockComments);
-      setLikeCount(mockPost.likes);
-      setLoading(false);
-    }, 500);
+    if (id) {
+      fetchArticle();
+      fetchComments();
+    }
   }, [id]);
 
-  const toggleLike = () => {
-    if (liked) {
-      setLikeCount(likeCount - 1);
-    } else {
-      setLikeCount(likeCount + 1);
+  const fetchArticle = async () => {
+    try {
+      setLoading(true);
+      if (!id) return;
+
+      const { data: article, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      setArticle(article as Article);
+
+      // Fetch the author
+      const { data: author, error: authorError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", article.author_id)
+        .single();
+
+      if (authorError) throw authorError;
+
+      setAuthor(author as Profile);
+    } catch (error: any) {
+      console.error("Erro ao carregar artigo:", error.message);
+      toast.error("Não foi possível carregar o artigo");
+    } finally {
+      setLoading(false);
     }
-    setLiked(!liked);
   };
 
-  const toggleBookmark = () => {
-    setBookmarked(!bookmarked);
-  };
+  const fetchComments = async () => {
+    try {
+      if (!id) return;
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: post?.title,
-        text: post?.excerpt,
-        url: window.location.href,
-      });
-    } else {
-      // Fallback for browsers that don't support navigator.share
-      navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
+      const { data, error } = await supabase
+        .from("comments")
+        .select(`
+          *,
+          author:profiles(*)
+        `)
+        .eq("article_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setComments(data as Comment[]);
+    } catch (error: any) {
+      console.error("Erro ao carregar comentários:", error.message);
     }
   };
 
   const handleCommentAdded = () => {
-    // This would normally fetch updated comments from the server
-    // For now, just adding a mock comment
-    const newComment: Comment = {
-      id: `c${comments.length + 1}`,
-      author: {
-        name: "Current User",
-        avatar: "https://i.pravatar.cc/150?img=19"
-      },
-      content: "Thanks for sharing this insightful article! I found the section on AI ethics particularly relevant to the challenges we're facing in our industry.",
-      created_at: new Date().toISOString(),
-      likes: 0
-    };
-    
-    setComments([newComment, ...comments]);
+    fetchComments();
   };
 
   if (loading) {
@@ -149,26 +97,29 @@ export default function BlogDetailPage() {
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse-slow">Loading article...</div>
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Carregando artigo...</span>
+          </div>
         </main>
         <Footer />
       </div>
     );
   }
 
-  if (!post) {
+  if (!article || !author) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div>Article not found</div>
+          <div>Artigo não encontrado</div>
         </main>
         <Footer />
       </div>
     );
   }
 
-  const publishedDate = format(new Date(post.published_at), "MMMM d, yyyy");
+  const publishedDate = format(new Date(article.created_at), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -178,82 +129,86 @@ export default function BlogDetailPage() {
         <article className="container mx-auto px-4 py-8 max-w-4xl">
           {/* Header */}
           <header className="mb-8 animate-fade-in">
-            <Badge variant="secondary" className="mb-4">{post.category}</Badge>
-            <h1 className="heading-xl mb-6">{post.title}</h1>
+            <Badge variant="secondary" className="mb-4">{article.sector}</Badge>
+            <h1 className="text-4xl font-bold mb-6">{article.title}</h1>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar>
-                  <AvatarImage src={post.author.avatar} alt={post.author.name} />
-                  <AvatarFallback>{post.author.name.slice(0, 2)}</AvatarFallback>
+                  <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
+                  <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{post.author.name}</p>
+                  <p className="font-medium">{author.username}</p>
                   <p className="text-sm text-muted-foreground">{publishedDate}</p>
                 </div>
               </div>
               
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" onClick={toggleLike} className={`${liked ? 'text-destructive' : ''}`}>
-                  <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={toggleBookmark} className={`${bookmarked ? 'text-primary' : ''}`}>
-                  <BookmarkIcon className={`h-5 w-5 ${bookmarked ? 'fill-current' : ''}`} />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleShare}>
-                  <Share2 className="h-5 w-5" />
-                </Button>
+                <LikeButton articleId={article.id} authorId={article.author_id} />
+                <SaveArticleButton articleId={article.id} />
+                <ShareButton 
+                  title={article.title}
+                  text={`Confira este artigo: ${article.title}`}
+                  url={window.location.href}
+                />
               </div>
             </div>
           </header>
           
           {/* Featured Image */}
-          <div className="mb-10 animate-fade-in delay-200">
-            <img 
-              src={post.image} 
-              alt={post.title} 
-              className="w-full h-auto rounded-lg object-cover"
-            />
-          </div>
+          {article.image_url && (
+            <div className="mb-10 animate-fade-in">
+              <img 
+                src={article.image_url} 
+                alt={article.title} 
+                className="w-full h-auto rounded-lg object-cover aspect-video"
+              />
+            </div>
+          )}
           
           {/* Content */}
-          <div 
-            className="prose prose-lg prose-invert max-w-none mb-12 animate-fade-in delay-300"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          ></div>
+          <div className="prose prose-lg prose-invert max-w-none mb-12 whitespace-pre-line">
+            {article.content}
+          </div>
           
           {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-10 animate-fade-in delay-400">
-            <Badge variant="outline">Artificial Intelligence</Badge>
-            <Badge variant="outline">Business Strategy</Badge>
-            <Badge variant="outline">Technology Trends</Badge>
-            <Badge variant="outline">Digital Transformation</Badge>
+          <div className="flex flex-wrap gap-2 mb-10">
+            <Badge variant="outline">{article.sector}</Badge>
           </div>
           
           {/* Social Share */}
-          <div className="flex items-center justify-between border-t border-b border-border py-6 mb-10 animate-fade-in delay-500">
+          <div className="flex items-center justify-between border-t border-b border-border py-6 mb-10">
             <div className="flex items-center space-x-4">
-              <span className="text-muted-foreground">Share this article:</span>
-              <Button variant="ghost" size="sm" onClick={handleShare}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
+              <span className="text-muted-foreground">Compartilhar:</span>
+              <ShareButton 
+                title={article.title}
+                text={`Confira este artigo: ${article.title}`}
+                url={window.location.href}
+              />
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={toggleLike} className={`${liked ? 'text-destructive' : ''}`}>
-                <Heart className={`h-4 w-4 mr-2 ${liked ? 'fill-current' : ''}`} />
-                {likeCount} likes
-              </Button>
-              <Button variant="ghost" size="sm" onClick={toggleBookmark}>
-                <BookmarkIcon className={`h-4 w-4 mr-2 ${bookmarked ? 'fill-current' : ''}`} />
-                {bookmarked ? 'Saved' : 'Save'}
-              </Button>
+              <LikeButton articleId={article.id} authorId={article.author_id} showCount />
+              <SaveArticleButton articleId={article.id} size="default">
+                Salvar
+              </SaveArticleButton>
             </div>
           </div>
           
           {/* Comments Section */}
-          <section className="border-t border-border pt-10 animate-fade-in">
-            <CommentForm postId={post.id} onCommentAdded={handleCommentAdded} />
+          <section className="border-t border-border pt-10">
+            <h2 className="text-2xl font-bold mb-6">Comentários</h2>
+            {user ? (
+              <CommentForm articleId={article.id} authorId={article.author_id} onCommentAdded={handleCommentAdded} />
+            ) : (
+              <div className="mb-6 text-center py-6 border border-dashed border-border rounded-lg">
+                <p className="text-muted-foreground">Faça login para deixar um comentário</p>
+                <Button variant="link" onClick={() => window.location.href = '/auth'}>
+                  Entrar
+                </Button>
+              </div>
+            )}
+            
             <div className="mt-12">
               <CommentList comments={comments} />
             </div>
