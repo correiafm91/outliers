@@ -13,16 +13,12 @@ interface CommentFormProps {
   articleId: string;
   authorId: string;
   onCommentAdded: () => void;
-  postId?: string; // Add postId as an optional prop for backward compatibility
 }
 
-export function CommentForm({ articleId, authorId, onCommentAdded, postId }: CommentFormProps) {
+export function CommentForm({ articleId, authorId, onCommentAdded }: CommentFormProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, profile } = useAuth();
-  
-  // Use postId if provided (for backward compatibility)
-  const actualArticleId = postId || articleId;
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +40,7 @@ export function CommentForm({ articleId, authorId, onCommentAdded, postId }: Com
       const { error } = await supabase
         .from("comments")
         .insert({
-          article_id: actualArticleId,
+          article_id: articleId,
           author_id: user.id,
           content: content.trim()
         });
@@ -54,21 +50,16 @@ export function CommentForm({ articleId, authorId, onCommentAdded, postId }: Com
       // Only try to create notification if the author is not the same as the commenter
       if (user.id !== authorId) {
         try {
-          // Create a notification, but don't block the comment process if it fails
-          const notificationData = {
-            user_id: authorId,
-            actor_id: user.id,
-            type: 'comment',
-            article_id: actualArticleId,
-            read: false
-          };
-          
-          // @ts-ignore - Workaround for TypeScript error
-          const { error: notifError } = await supabase.from('notifications').insert(notificationData);
-          
-          if (notifError) {
-            console.log("Erro ao criar notificação:", notifError);
-          }
+          // Create a notification for the comment
+          await supabase
+            .from("notifications")
+            .insert({
+              user_id: authorId,
+              actor_id: user.id,
+              type: 'comment',
+              article_id: articleId,
+              read: false
+            });
         } catch (notifError) {
           console.error("Erro ao criar notificação:", notifError);
           // Continue with the comment process even if notification fails

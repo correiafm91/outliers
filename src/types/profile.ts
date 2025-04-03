@@ -1,10 +1,21 @@
 
-// Define types to be used in ProfilePage and other components
+// Define tipos para serem usados em ProfilePage e outros componentes
+export type SectorType = 
+  | "technology" 
+  | "marketing" 
+  | "gastronomy" 
+  | "education" 
+  | "finance" 
+  | "health" 
+  | "sports" 
+  | "entertainment" 
+  | "other";
+
 export interface Profile {
   id: string;
   username: string;
   avatar_url: string | null;
-  sector: string;
+  sector: SectorType | string;
   bio?: string | null;
   created_at: string;
 }
@@ -16,7 +27,7 @@ export interface Article {
   image_url: string | null;
   created_at: string;
   updated_at: string;
-  sector: string;
+  sector: SectorType | string;
   author_id: string;
 }
 
@@ -32,9 +43,17 @@ export interface Notification {
   id: string;
   user_id: string;
   actor_id: string;
-  type: string;
-  article_id?: string;
+  type: 'like' | 'comment' | 'follow';
+  article_id?: string | null;
   read: boolean;
   created_at: string;
   actor?: Profile;
+}
+
+export interface SavedArticle {
+  id: string;
+  user_id: string;
+  article_id: string;
+  created_at: string;
+  article?: Article;
 }

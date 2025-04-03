@@ -16,7 +16,7 @@ type ExtendedDatabase = Database & {
           user_id: string;
           actor_id: string;
           type: string;
-          article_id?: string;
+          article_id?: string | null;
           read: boolean;
           created_at: string;
         };
@@ -25,7 +25,7 @@ type ExtendedDatabase = Database & {
           user_id: string;
           actor_id: string;
           type: string;
-          article_id?: string;
+          article_id?: string | null;
           read?: boolean;
           created_at?: string;
         };
@@ -34,7 +34,7 @@ type ExtendedDatabase = Database & {
           user_id?: string;
           actor_id?: string;
           type?: string;
-          article_id?: string;
+          article_id?: string | null;
           read?: boolean;
           created_at?: string;
         };
@@ -59,6 +59,26 @@ type ExtendedDatabase = Database & {
           created_at?: string;
         };
       };
+      saved_articles: {
+        Row: {
+          id: string;
+          user_id: string;
+          article_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          article_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          article_id?: string;
+          created_at?: string;
+        };
+      };
       profiles: {
         Row: {
           id: string;
@@ -67,6 +87,22 @@ type ExtendedDatabase = Database & {
           sector: string | null;
           bio: string | null;
           created_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          avatar_url?: string | null;
+          sector?: string | null;
+          bio?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          avatar_url?: string | null;
+          sector?: string | null;
+          bio?: string | null;
+          created_at?: string;
         };
       };
     } & Database['public']['Tables'];

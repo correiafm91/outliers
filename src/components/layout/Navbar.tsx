@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, Search, Bell, User, PenSquare } from "lucide-react";
+import { Menu, Search, Bell, User, PenSquare, Bookmark } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,16 +27,22 @@ export function Navbar() {
   useEffect(() => {
     if (user) {
       fetchUnreadNotifications();
+      
+      // Set up a timer to refresh notification count
+      const timer = setInterval(fetchUnreadNotifications, 60000); // Every minute
+      
+      return () => clearInterval(timer);
     }
   }, [user]);
 
   const fetchUnreadNotifications = async () => {
+    if (!user) return;
+    
     try {
-      // @ts-ignore - Working around TypeScript error
       const { count, error } = await supabase
         .from("notifications")
         .select("*", { count: "exact" })
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .eq("read", false);
 
       if (error) {
@@ -86,7 +93,7 @@ export function Navbar() {
               <Link to="/blogs">Artigos</Link>
             </Button>
             <Button variant="link" asChild>
-              <Link to="/search">Pesquisar</Link>
+              <Link to="/saved-articles">Salvos</Link>
             </Button>
           </nav>
         </div>
@@ -107,6 +114,10 @@ export function Navbar() {
             <>
               <Button variant="outline" size="icon" onClick={() => navigate("/new-article")} title="Novo Artigo">
                 <PenSquare className="h-5 w-5" />
+              </Button>
+              
+              <Button variant="ghost" size="icon" onClick={() => navigate("/saved-articles")} title="Artigos Salvos">
+                <Bookmark className="h-5 w-5" />
               </Button>
               
               <Button 
@@ -148,7 +159,7 @@ export function Navbar() {
                     <Link to="/new-article">Novo Artigo</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings">Configurações</Link>
+                    <Link to="/saved-articles">Artigos Salvos</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -175,6 +186,7 @@ export function Navbar() {
           <nav className="grid gap-2">
             <Link to="/" className="flex items-center py-2 hover:text-primary/80">Início</Link>
             <Link to="/blogs" className="flex items-center py-2 hover:text-primary/80">Artigos</Link>
+            <Link to="/saved-articles" className="flex items-center py-2 hover:text-primary/80">Artigos Salvos</Link>
             <Link to="/search" className="flex items-center py-2 hover:text-primary/80">Pesquisar</Link>
             
             {user ? (

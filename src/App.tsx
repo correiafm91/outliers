@@ -14,6 +14,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NewArticlePage from "./pages/NewArticlePage";
 import EditArticlePage from "./pages/EditArticlePage";
 import SearchPage from "./pages/SearchPage";
+import SavedArticlesPage from "./pages/SavedArticlesPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -43,8 +44,7 @@ const BrazilianTimeSetter = ({ children }: { children: React.ReactNode }) => {
     // Set Brazilian Portuguese for the app
     document.documentElement.lang = 'pt-BR';
     
-    // Set the timezone using Intl (this doesn't actually change JS Date objects,
-    // but ensures consistent formatting in our app)
+    // Set the timezone using Intl
     const formatter = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       year: 'numeric',
@@ -103,6 +103,15 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/saved-articles" 
+                element={
+                  <ProtectedRoute>
+                    <SavedArticlesPage />
                   </ProtectedRoute>
                 } 
               />
