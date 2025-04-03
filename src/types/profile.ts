@@ -17,6 +17,9 @@ export interface Profile {
   avatar_url: string | null;
   sector: SectorType | string;
   bio?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  linkedin_url?: string | null;
   created_at: string;
 }
 

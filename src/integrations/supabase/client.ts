@@ -86,6 +86,9 @@ type ExtendedDatabase = Database & {
           avatar_url: string | null;
           sector: string | null;
           bio: string | null;
+          instagram_url: string | null;
+          youtube_url: string | null;
+          linkedin_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -94,6 +97,9 @@ type ExtendedDatabase = Database & {
           avatar_url?: string | null;
           sector?: string | null;
           bio?: string | null;
+          instagram_url?: string | null;
+          youtube_url?: string | null;
+          linkedin_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -102,6 +108,9 @@ type ExtendedDatabase = Database & {
           avatar_url?: string | null;
           sector?: string | null;
           bio?: string | null;
+          instagram_url?: string | null;
+          youtube_url?: string | null;
+          linkedin_url?: string | null;
           created_at?: string;
         };
       };

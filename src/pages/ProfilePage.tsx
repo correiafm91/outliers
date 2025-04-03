@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Pencil, Trash2, Copy, Bell, User, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Copy, Bell, User, Loader2, Instagram, Youtube, Linkedin } from "lucide-react";
 import { Profile, Article, Follower, Notification } from "@/types/profile";
+import { ShareButton } from "@/components/share/ShareButton";
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,8 @@ export default function ProfilePage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -44,7 +47,6 @@ export default function ProfilePage() {
         fetchNotifications();
       }
       
-      // Try to fetch followers info, but handle gracefully if tables don't exist yet
       try {
         fetchFollowers();
         checkIfFollowing();
@@ -106,9 +108,7 @@ export default function ProfilePage() {
     if (!id) return;
     
     try {
-      // Fetch followers - handle gracefully if table doesn't exist
       try {
-        // @ts-ignore - Workaround for TypeScript error
         const { data: followersData } = await supabase
           .from("followers")
           .select(`
@@ -118,16 +118,14 @@ export default function ProfilePage() {
           .eq("following_id", id);
 
         if (followersData) {
-          setFollowers(followersData as Follower[]);
+          setFollowers(followersData as unknown as Follower[]);
         }
       } catch (error) {
         console.log("Tabela de seguidores pode não existir:", error);
         setFollowers([]);
       }
 
-      // Count following - handle gracefully if table doesn't exist
       try {
-        // @ts-ignore - Workaround for TypeScript error
         const { count } = await supabase
           .from("followers")
           .select("*", { count: "exact" })
@@ -147,7 +145,6 @@ export default function ProfilePage() {
     if (!user || !id) return;
     
     try {
-      // @ts-ignore - Workaround for TypeScript error
       const { data } = await supabase
         .from("followers")
         .select("*")
@@ -166,7 +163,6 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      // @ts-ignore - Workaround for TypeScript error
       const { data } = await supabase
         .from("notifications")
         .select(`
@@ -178,7 +174,7 @@ export default function ProfilePage() {
         .limit(20);
 
       if (data) {
-        setNotifications(data as Notification[]);
+        setNotifications(data as unknown as Notification[]);
       }
     } catch (error) {
       console.error("Erro em fetchNotifications:", error);
@@ -196,8 +192,6 @@ export default function ProfilePage() {
 
     try {
       if (isFollowing) {
-        // Unfollow
-        // @ts-ignore - Workaround for TypeScript error
         const { error } = await supabase
           .from("followers")
           .delete()
@@ -211,8 +205,6 @@ export default function ProfilePage() {
         
         toast.success("Deixou de seguir com sucesso!");
       } else {
-        // Follow
-        // @ts-ignore - Workaround for TypeScript error
         const { error } = await supabase
           .from("followers")
           .insert({
@@ -228,7 +220,6 @@ export default function ProfilePage() {
         toast.success("Seguindo agora!");
       }
 
-      // Refresh followers and following status
       fetchFollowers();
       checkIfFollowing();
     } catch (error: any) {
@@ -237,17 +228,65 @@ export default function ProfilePage() {
   };
 
   const handleArticleDelete = async (articleId: string) => {
+    setArticleToDelete(articleId);
+    setConfirmDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteArticle = async () => {
+    if (!articleToDelete) return;
+    
     try {
+      const { error: savedArticlesError } = await supabase
+        .from("saved_articles")
+        .delete()
+        .eq("article_id", articleToDelete);
+        
+      if (savedArticlesError) {
+        console.error("Erro ao excluir artigos salvos:", savedArticlesError);
+        throw savedArticlesError;
+      }
+      
+      const { error: likesError } = await supabase
+        .from("likes")
+        .delete()
+        .eq("article_id", articleToDelete);
+        
+      if (likesError) {
+        console.error("Erro ao excluir curtidas:", likesError);
+        throw likesError;
+      }
+      
+      const { error: commentsError } = await supabase
+        .from("comments")
+        .delete()
+        .eq("article_id", articleToDelete);
+        
+      if (commentsError) {
+        console.error("Erro ao excluir comentários:", commentsError);
+        throw commentsError;
+      }
+
+      const { error: notificationsError } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("article_id", articleToDelete);
+        
+      if (notificationsError) {
+        console.error("Erro ao excluir notificações:", notificationsError);
+        throw notificationsError;
+      }
+      
       const { error } = await supabase
         .from("articles")
         .delete()
-        .eq("id", articleId);
+        .eq("id", articleToDelete);
 
       if (error) throw error;
       
-      // Refresh articles list
       fetchArticles();
       toast.success("Artigo excluído com sucesso!");
+      setConfirmDeleteDialogOpen(false);
+      setArticleToDelete(null);
     } catch (error: any) {
       toast.error(error.message || "Erro ao excluir artigo");
     }
@@ -265,7 +304,6 @@ export default function ProfilePage() {
     try {
       let avatarUrl = profile?.avatar_url;
 
-      // Upload image if selected
       if (imageFile) {
         setUploadingImage(true);
         const fileExt = imageFile.name.split('.').pop();
@@ -288,14 +326,16 @@ export default function ProfilePage() {
         setUploadingImage(false);
       }
 
-      // Update profile
       const { error } = await supabase
         .from("profiles")
         .update({
           username: editedProfile.username,
           sector: editedProfile.sector,
           bio: editedProfile.bio,
-          avatar_url: avatarUrl
+          avatar_url: avatarUrl,
+          instagram_url: editedProfile.instagram_url,
+          youtube_url: editedProfile.youtube_url,
+          linkedin_url: editedProfile.linkedin_url
         })
         .eq("id", user.id);
 
@@ -304,7 +344,6 @@ export default function ProfilePage() {
         throw error;
       }
       
-      // Refresh profile
       fetchProfile();
       setIsEditing(false);
       toast.success("Perfil atualizado com sucesso!");
@@ -322,7 +361,6 @@ export default function ProfilePage() {
 
   const markNotificationAsRead = async (notificationId: string) => {
     try {
-      // @ts-ignore - Workaround for TypeScript error
       const { error } = await supabase
         .from("notifications")
         .update({ read: true })
@@ -330,7 +368,6 @@ export default function ProfilePage() {
 
       if (error) throw error;
       
-      // Refresh notifications
       fetchNotifications();
     } catch (error: any) {
       toast.error(error.message || "Erro ao marcar notificação como lida");
@@ -382,7 +419,7 @@ export default function ProfilePage() {
               <Avatar className="w-24 h-24 border-4 border-background">
                 <AvatarImage src={profile.avatar_url || ""} />
                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {profile.username.slice(0, 2).toUpperCase()}
+                  {profile.username && profile.username.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -398,6 +435,26 @@ export default function ProfilePage() {
                 {profile.bio && (
                   <p className="mt-2 text-sm text-muted-foreground">{profile.bio}</p>
                 )}
+                <div className="flex gap-3 mt-2">
+                  {profile.instagram_url && (
+                    <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" 
+                       className="text-muted-foreground hover:text-primary transition-colors">
+                      <Instagram size={18} />
+                    </a>
+                  )}
+                  {profile.youtube_url && (
+                    <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer"
+                       className="text-muted-foreground hover:text-primary transition-colors">
+                      <Youtube size={18} />
+                    </a>
+                  )}
+                  {profile.linkedin_url && (
+                    <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer"
+                       className="text-muted-foreground hover:text-primary transition-colors">
+                      <Linkedin size={18} />
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="flex flex-row gap-2 md:self-start">
                 {isCurrentUser ? (
@@ -465,13 +522,13 @@ export default function ProfilePage() {
                       </Button>
                       {isCurrentUser && (
                         <div className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <ShareButton 
+                            title={article.title} 
+                            id={article.id} 
+                            type="article"
+                            variant="ghost"
                             size="icon"
-                            onClick={() => handleCopyLink(article.id)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                          />
                           <Button 
                             variant="ghost" 
                             size="icon"
@@ -479,30 +536,13 @@ export default function ProfilePage() {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Excluir artigo</DialogTitle>
-                                <DialogDescription>
-                                  Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <DialogFooter>
-                                <Button variant="outline" onClick={() => {}}>Cancelar</Button>
-                                <Button 
-                                  variant="destructive" 
-                                  onClick={() => handleArticleDelete(article.id)}
-                                >
-                                  Excluir
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleArticleDelete(article.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
                       )}
                     </CardFooter>
@@ -599,7 +639,7 @@ export default function ProfilePage() {
                     src={imageFile ? URL.createObjectURL(imageFile) : profile.avatar_url || ""}
                   />
                   <AvatarFallback className="text-2xl">
-                    {profile.username.slice(0, 2).toUpperCase()}
+                    {profile.username && profile.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -654,6 +694,40 @@ export default function ProfilePage() {
                   rows={4}
                 />
               </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="instagram" className="flex items-center gap-2">
+                  <Instagram size={16} /> Instagram
+                </Label>
+                <Input 
+                  id="instagram" 
+                  placeholder="https://instagram.com/seuusuario"
+                  value={editedProfile.instagram_url || ""}
+                  onChange={(e) => setEditedProfile({...editedProfile, instagram_url: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="youtube" className="flex items-center gap-2">
+                  <Youtube size={16} /> YouTube
+                </Label>
+                <Input 
+                  id="youtube" 
+                  placeholder="https://youtube.com/@seucanal"
+                  value={editedProfile.youtube_url || ""}
+                  onChange={(e) => setEditedProfile({...editedProfile, youtube_url: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="linkedin" className="flex items-center gap-2">
+                  <Linkedin size={16} /> LinkedIn
+                </Label>
+                <Input 
+                  id="linkedin" 
+                  placeholder="https://linkedin.com/in/seuperfil"
+                  value={editedProfile.linkedin_url || ""}
+                  onChange={(e) => setEditedProfile({...editedProfile, linkedin_url: e.target.value})}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
@@ -662,6 +736,26 @@ export default function ProfilePage() {
                 disabled={uploadingImage}
               >
                 {uploadingImage ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Excluir artigo</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDeleteDialogOpen(false)}>Cancelar</Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeleteArticle}
+              >
+                Excluir
               </Button>
             </DialogFooter>
           </DialogContent>
