@@ -54,7 +54,7 @@ const BrazilianTimeSetter = ({ children }: { children: React.ReactNode }) => {
       minute: 'numeric',
     });
     
-    console.log(`Current time in São Paulo: ${formatter.format(new Date())}`);
+    console.log(`Horário atual em São Paulo: ${formatter.format(new Date())}`);
   }, []);
 
   return <>{children}</>;

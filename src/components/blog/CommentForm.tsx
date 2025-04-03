@@ -49,18 +49,22 @@ export function CommentForm({ articleId, authorId, onCommentAdded }: CommentForm
 
       if (error) throw error;
 
-      // Only try to create notification if the tables exist
+      // Only try to create notification if the author is not the same as the commenter
       if (user.id !== authorId) {
+        // We don't need to wait for this to complete, and we'll handle any errors silently
         try {
-          await supabase
-            .from("notifications")
-            .insert({
-              user_id: authorId,
-              actor_id: user.id,
-              type: "comment",
-              article_id: articleId,
-              read: false
-            });
+          // Create a notification, but don't block the comment process
+          const { error: notifError } = await supabase.from('notifications').insert({
+            user_id: authorId,
+            actor_id: user.id,
+            type: 'comment',
+            article_id: articleId,
+            read: false
+          });
+          
+          if (notifError) {
+            console.log("Erro ao criar notificação:", notifError);
+          }
         } catch (notifError) {
           console.error("Erro ao criar notificação:", notifError);
           // Continue with the comment process even if notification fails

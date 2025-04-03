@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Pencil, Trash2, Copy, Bell, User } from "lucide-react";
+import { Pencil, Trash2, Copy, Bell, User, Loader2 } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -23,6 +23,7 @@ interface Profile {
   avatar_url: string | null;
   sector: string;
   bio?: string;
+  created_at: string;
 }
 
 interface Article {
@@ -43,6 +44,17 @@ interface Follower {
   follower?: Profile;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  actor_id: string;
+  type: string;
+  article_id?: string;
+  read: boolean;
+  created_at: string;
+  actor?: Profile;
+}
+
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -54,27 +66,35 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isCurrentUser, setIsCurrentUser] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [editedProfile, setEditedProfile] = useState<Partial<Profile>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProfile();
     fetchArticles();
-    fetchFollowers();
-    checkIfFollowing();
     
     if (user) {
       setIsCurrentUser(id === user.id);
       if (id === user.id) {
         fetchNotifications();
       }
+      
+      // Try to fetch followers info, but handle gracefully if tables don't exist yet
+      try {
+        fetchFollowers();
+        checkIfFollowing();
+      } catch (error) {
+        console.error("Erro ao carregar informações de seguidores:", error);
+      }
     }
   }, [id, user]);
 
   const fetchProfile = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -83,6 +103,7 @@ export default function ProfilePage() {
 
       if (error) {
         console.error("Erro ao buscar perfil:", error);
+        toast.error("Erro ao carregar perfil");
         return;
       }
 
@@ -94,6 +115,9 @@ export default function ProfilePage() {
       });
     } catch (error) {
       console.error("Erro em fetchProfile:", error);
+      toast.error("Erro ao carregar informações do perfil");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,59 +141,59 @@ export default function ProfilePage() {
   };
 
   const fetchFollowers = async () => {
+    if (!id) return;
+    
     try {
-      // Fetch followers
-      const { data: followersData, error: followersError } = await supabase
-        .from("followers")
-        .select(`
-          *,
-          follower:profiles!followers_follower_id_fkey(*)
-        `)
-        .eq("following_id", id);
+      // Fetch followers - handle gracefully if table doesn't exist
+      try {
+        const { data: followersData } = await supabase
+          .from("followers")
+          .select(`
+            *,
+            follower:profiles!followers_follower_id_fkey(*)
+          `)
+          .eq("following_id", id);
 
-      if (followersError) {
-        console.error("Erro ao buscar seguidores:", followersError);
-        return;
+        if (followersData) {
+          setFollowers(followersData);
+        }
+      } catch (error) {
+        console.log("Tabela de seguidores pode não existir:", error);
+        setFollowers([]);
       }
 
-      setFollowers(followersData || []);
+      // Count following - handle gracefully if table doesn't exist
+      try {
+        const { count } = await supabase
+          .from("followers")
+          .select("*", { count: "exact" })
+          .eq("follower_id", id);
 
-      // Count following
-      const { count, error: followingError } = await supabase
-        .from("followers")
-        .select("*", { count: "exact" })
-        .eq("follower_id", id);
-
-      if (followingError) {
-        console.error("Erro ao contar seguindo:", followingError);
-        return;
+        setFollowing(count || 0);
+      } catch (error) {
+        console.log("Erro ao contar seguindo:", error);
+        setFollowing(0);
       }
-
-      setFollowing(count || 0);
     } catch (error) {
       console.error("Erro em fetchFollowers:", error);
     }
   };
 
   const checkIfFollowing = async () => {
-    if (!user) return;
+    if (!user || !id) return;
     
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("followers")
         .select("*")
         .eq("follower_id", user.id)
         .eq("following_id", id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Erro ao verificar se está seguindo:", error);
-        return;
-      }
-
       setIsFollowing(!!data);
     } catch (error) {
-      console.error("Erro em checkIfFollowing:", error);
+      console.error("Erro ao verificar se está seguindo:", error);
+      setIsFollowing(false);
     }
   };
 
@@ -177,24 +201,22 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("notifications")
         .select(`
           *,
-          actor:profiles!notifications_actor_id_fkey(*)
+          actor:profiles(*)
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(20);
 
-      if (error) {
-        console.error("Erro ao buscar notificações:", error);
-        return;
+      if (data) {
+        setNotifications(data);
       }
-
-      setNotifications(data || []);
     } catch (error) {
       console.error("Erro em fetchNotifications:", error);
+      setNotifications([]);
     }
   };
 
@@ -203,6 +225,8 @@ export default function ProfilePage() {
       navigate("/auth");
       return;
     }
+
+    if (!id) return;
 
     try {
       if (isFollowing) {
@@ -213,7 +237,10 @@ export default function ProfilePage() {
           .eq("follower_id", user.id)
           .eq("following_id", id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erro ao deixar de seguir:", error);
+          throw error;
+        }
         
         toast.success("Deixou de seguir com sucesso!");
       } else {
@@ -225,7 +252,10 @@ export default function ProfilePage() {
             following_id: id
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erro ao seguir:", error);
+          throw error;
+        }
         
         toast.success("Seguindo agora!");
       }
@@ -277,7 +307,10 @@ export default function ProfilePage() {
           .from('images')
           .upload(filePath, imageFile, { upsert: true });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Erro ao fazer upload de imagem:", uploadError);
+          throw uploadError;
+        }
 
         const { data: urlData } = supabase.storage
           .from('images')
@@ -298,7 +331,10 @@ export default function ProfilePage() {
         })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao atualizar perfil:", error);
+        throw error;
+      }
       
       // Refresh profile
       fetchProfile();
@@ -332,12 +368,24 @@ export default function ProfilePage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin mr-2" />
+          <p>Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8 flex items-center justify-center">
-          <p>Carregando perfil...</p>
+          <p>Perfil não encontrado.</p>
         </div>
       </div>
     );
@@ -514,7 +562,7 @@ export default function ProfilePage() {
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={notification.actor?.avatar_url || ""} />
                             <AvatarFallback>
-                              {notification.actor?.username.slice(0, 2).toUpperCase()}
+                              {notification.actor?.username.slice(0, 2).toUpperCase() || "??"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
