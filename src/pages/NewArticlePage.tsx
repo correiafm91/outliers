@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Image, Loader2 } from "lucide-react";
 
+type SectorType = "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment" | "other";
+
 export default function NewArticlePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [sector, setSector] = useState("");
+  const [sector, setSector] = useState<SectorType | "">("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,7 +75,7 @@ export default function NewArticlePage() {
         .insert({
           title,
           content,
-          sector,
+          sector: sector as SectorType,
           author_id: user.id,
           image_url: imageUrl
         })
@@ -116,7 +117,7 @@ export default function NewArticlePage() {
                 <Label htmlFor="sector">Área *</Label>
                 <Select
                   value={sector}
-                  onValueChange={setSector}
+                  onValueChange={(value) => setSector(value as SectorType)}
                   required
                 >
                   <SelectTrigger>

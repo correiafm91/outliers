@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,13 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Image, Loader2 } from "lucide-react";
 
+type SectorType = "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment" | "other";
+
 interface Article {
   id: string;
   title: string;
   content: string;
   image_url: string | null;
   created_at: string;
-  sector: string;
+  sector: SectorType;
   author_id: string;
 }
 
@@ -30,7 +31,7 @@ export default function EditArticlePage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [sector, setSector] = useState("");
+  const [sector, setSector] = useState<SectorType>("other");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +48,8 @@ export default function EditArticlePage() {
 
   const fetchArticle = async () => {
     try {
+      if (!id) return;
+      
       const { data, error } = await supabase
         .from("articles")
         .select("*")
@@ -61,10 +64,10 @@ export default function EditArticlePage() {
         return;
       }
 
-      setArticle(data);
+      setArticle(data as Article);
       setTitle(data.title);
       setContent(data.content);
-      setSector(data.sector);
+      setSector(data.sector as SectorType);
       if (data.image_url) {
         setPreview(data.image_url);
       }
@@ -178,7 +181,7 @@ export default function EditArticlePage() {
                 <Label htmlFor="sector">Área *</Label>
                 <Select
                   value={sector}
-                  onValueChange={setSector}
+                  onValueChange={(value) => setSector(value as SectorType)}
                   required
                 >
                   <SelectTrigger>

@@ -6,10 +6,77 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://vymlknawpbghthzdzthf.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5bWxrbmF3cGJnaHRoemR6dGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1OTcxODAsImV4cCI6MjA1OTE3MzE4MH0.dIYYBRD7VLaz2j13RsKObQAru2DDG2zf64W5JVqAAzA";
 
+// Workaround for TypeScript to recognize additional tables
+type ExtendedDatabase = Database & {
+  public: {
+    Tables: {
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          actor_id: string;
+          type: string;
+          article_id?: string;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          actor_id: string;
+          type: string;
+          article_id?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          actor_id?: string;
+          type?: string;
+          article_id?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+      };
+      followers: {
+        Row: {
+          id: string;
+          follower_id: string;
+          following_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          follower_id: string;
+          following_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          follower_id?: string;
+          following_id?: string;
+          created_at?: string;
+        };
+      };
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          avatar_url: string | null;
+          sector: string | null;
+          bio: string | null;
+          created_at: string;
+        };
+      };
+    } & Database['public']['Tables'];
+  };
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<ExtendedDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true
