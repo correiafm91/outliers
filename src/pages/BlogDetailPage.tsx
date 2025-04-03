@@ -81,8 +81,20 @@ export default function BlogDetailPage() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      // Transform the data to match the Comment interface
+      const formattedComments = data.map((item: any) => ({
+        id: item.id,
+        author: {
+          name: item.author.username,
+          avatar: item.author.avatar_url || '',
+        },
+        content: item.content,
+        created_at: item.created_at,
+        likes: 0, // Default likes count
+      }));
 
-      setComments(data as Comment[]);
+      setComments(formattedComments);
     } catch (error: any) {
       console.error("Erro ao carregar comentários:", error.message);
     }
@@ -149,8 +161,8 @@ export default function BlogDetailPage() {
                 <SaveArticleButton articleId={article.id} />
                 <ShareButton 
                   title={article.title}
-                  text={`Confira este artigo: ${article.title}`}
-                  url={window.location.href}
+                  id={article.id}
+                  type="article"
                 />
               </div>
             </div>
@@ -183,8 +195,8 @@ export default function BlogDetailPage() {
               <span className="text-muted-foreground">Compartilhar:</span>
               <ShareButton 
                 title={article.title}
-                text={`Confira este artigo: ${article.title}`}
-                url={window.location.href}
+                id={article.id}
+                type="article"
               />
             </div>
             <div className="flex items-center space-x-4">

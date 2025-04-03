@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Facebook, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
+import { Share2, Copy, Facebook, Twitter, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 
 interface ShareButtonProps {
@@ -16,9 +16,10 @@ interface ShareButtonProps {
   type: 'article' | 'profile';
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  children?: React.ReactNode;
 }
 
-export function ShareButton({ title, id, type, variant = 'outline', size = 'default' }: ShareButtonProps) {
+export function ShareButton({ title, id, type, variant = 'outline', size = 'default', children }: ShareButtonProps) {
   const [open, setOpen] = useState(false);
   
   const getShareUrl = () => {
@@ -60,7 +61,7 @@ export function ShareButton({ title, id, type, variant = 'outline', size = 'defa
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size} className="gap-2">
           <Share2 className="h-4 w-4" />
-          {size !== 'icon' && "Compartilhar"}
+          {size !== 'icon' && (children || "Compartilhar")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

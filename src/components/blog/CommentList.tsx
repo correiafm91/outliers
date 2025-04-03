@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export interface Comment {
   id: string;
@@ -26,14 +27,14 @@ export function CommentList({ comments }: CommentListProps) {
   if (comments.length === 0) {
     return (
       <div className="text-center py-8 animate-fade-in">
-        <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+        <p className="text-muted-foreground">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6" id="comments">
-      <h3 className="heading-sm">Comments ({comments.length})</h3>
+      <h3 className="heading-sm">Comentários ({comments.length})</h3>
       <div className="space-y-6">
         {comments.map((comment, index) => (
           <CommentItem key={comment.id} comment={comment} delay={index} />
@@ -62,21 +63,30 @@ function CommentItem({ comment, delay }: CommentItemProps) {
     setLiked(!liked);
   };
 
-  const formattedDate = formatDistanceToNow(new Date(comment.created_at), { addSuffix: true });
+  // Format date in Portuguese
+  const formattedDate = formatDistanceToNow(new Date(comment.created_at), { 
+    addSuffix: true,
+    locale: ptBR 
+  });
   
   const delayClass = `delay-${Math.min(delay * 100, 500)}`;
+  
+  // Get author initials safely
+  const authorInitials = comment.author && comment.author.name 
+    ? comment.author.name.slice(0, 2).toUpperCase() 
+    : "??";
 
   return (
     <div className={`animate-once animate-fade-in ${delayClass}`}>
       <div className="flex gap-4">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-          <AvatarFallback>{comment.author.name.slice(0, 2)}</AvatarFallback>
+          <AvatarImage src={comment.author?.avatar} alt={comment.author?.name || "Usuário"} />
+          <AvatarFallback>{authorInitials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
           <div className="flex justify-between items-center">
             <div>
-              <h4 className="font-medium">{comment.author.name}</h4>
+              <h4 className="font-medium">{comment.author?.name || "Usuário"}</h4>
               <p className="text-sm text-muted-foreground">{formattedDate}</p>
             </div>
             <Button variant="ghost" size="icon">
