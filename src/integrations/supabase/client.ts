@@ -89,7 +89,9 @@ type ExtendedDatabase = Database & {
           instagram_url: string | null;
           youtube_url: string | null;
           linkedin_url: string | null;
+          facebook_url: string | null;
           created_at: string;
+          banner_url: string | null;
         };
         Insert: {
           id: string;
@@ -100,7 +102,9 @@ type ExtendedDatabase = Database & {
           instagram_url?: string | null;
           youtube_url?: string | null;
           linkedin_url?: string | null;
+          facebook_url?: string | null;
           created_at?: string;
+          banner_url?: string | null;
         };
         Update: {
           id?: string;
@@ -111,7 +115,9 @@ type ExtendedDatabase = Database & {
           instagram_url?: string | null;
           youtube_url?: string | null;
           linkedin_url?: string | null;
+          facebook_url?: string | null;
           created_at?: string;
+          banner_url?: string | null;
         };
       };
     } & Database['public']['Tables'];
@@ -127,3 +133,42 @@ export const supabase = createClient<ExtendedDatabase>(SUPABASE_URL, SUPABASE_PU
     autoRefreshToken: true
   }
 });
+
+// Create storage buckets if they don't exist
+const ensureStorageBuckets = async () => {
+  try {
+    // Check if profiles bucket exists
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error("Error checking storage buckets:", error.message);
+      return;
+    }
+    
+    const profilesBucketExists = buckets.some(bucket => bucket.name === 'profiles');
+    
+    if (!profilesBucketExists) {
+      const { error: createError } = await supabase.storage.createBucket('profiles', { 
+        public: true,
+        fileSizeLimit: 5 * 1024 * 1024 // 5MB limit
+      });
+      
+      if (createError) {
+        console.error("Error creating profiles bucket:", createError.message);
+      } else {
+        console.log("Created profiles storage bucket");
+        
+        // Set public policy for the bucket
+        const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl('dummy.txt', 1);
+        if (policyError && !policyError.message.includes('Object not found')) {
+          console.error("Error setting bucket policy:", policyError.message);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error setting up storage buckets:", error);
+  }
+};
+
+// Call this function when the client is first imported
+ensureStorageBuckets();

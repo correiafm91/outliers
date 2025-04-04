@@ -26,10 +26,16 @@ export function LikeButton({
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
+  // Load like state and count whenever component mounts or articleId/user changes
   useEffect(() => {
-    if (user) {
-      checkIfLiked();
+    if (articleId) {
+      // Always get the like count, even if user isn't logged in
       getLikeCount();
+      
+      // Only check if the current user liked it if they're logged in
+      if (user) {
+        checkIfLiked();
+      }
     }
   }, [articleId, user]);
 
