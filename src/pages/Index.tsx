@@ -7,76 +7,76 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Index() {
-  // Mock data for featured posts - will be replaced with Supabase data
+  // Dados para artigos em destaque - serão substituídos com dados do Supabase
   const featuredPosts: BlogPost[] = [
     {
       id: "1",
-      title: "The Future of AI in Business: Trends to Watch",
-      excerpt: "Artificial intelligence is reshaping how businesses operate. Here are the key trends to watch in the coming year.",
+      title: "O Futuro da IA nos Negócios: Tendências para Observar",
+      excerpt: "A inteligência artificial está remodelando como as empresas operam. Aqui estão as principais tendências para observar no próximo ano.",
       content: "",
       author: {
         name: "Alex Johnson",
         avatar: "https://i.pravatar.cc/150?img=1"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-      category: "Technology",
+      category: "Tecnologia",
       image: "https://images.unsplash.com/photo-1593642533144-3d62aa4783ec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 128,
       comments: 47
     },
     {
       id: "2",
-      title: "Sustainable Finance: Investing in the Future",
-      excerpt: "How sustainable finance is changing the investment landscape and what it means for your portfolio.",
+      title: "Finanças Sustentáveis: Investindo no Futuro",
+      excerpt: "Como as finanças sustentáveis estão mudando o panorama de investimentos e o que isso significa para seu portfólio.",
       content: "",
       author: {
         name: "Morgan Zhang",
         avatar: "https://i.pravatar.cc/150?img=5"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-      category: "Finance",
+      category: "Finanças",
       image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1626&q=80",
       likes: 92,
       comments: 31
     },
     {
       id: "3",
-      title: "Leadership in Crisis: Lessons from Top CEOs",
-      excerpt: "How successful leaders navigate through times of uncertainty and crisis. Insights from top executives.",
+      title: "Liderança em Crise: Lições dos Principais CEOs",
+      excerpt: "Como líderes de sucesso navegam em tempos de incerteza e crise. Insights dos principais executivos.",
       content: "",
       author: {
         name: "Taylor Reid",
         avatar: "https://i.pravatar.cc/150?img=3"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-      category: "Leadership",
+      category: "Liderança",
       image: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 76,
       comments: 24
     }
   ];
 
-  // Mock data for recent posts - will be replaced with Supabase data
+  // Dados para artigos recentes - serão substituídos com dados do Supabase
   const recentPosts: BlogPost[] = [
     {
       id: "4",
-      title: "Supply Chain Resilience: Strategies for the Modern Business",
-      excerpt: "Building resilient supply chains in an era of global disruption and uncertainty.",
+      title: "Resiliência na Cadeia de Suprimentos: Estratégias para Empresas Modernas",
+      excerpt: "Construindo cadeias de suprimentos resilientes em uma era de disrupção global e incerteza.",
       content: "",
       author: {
         name: "Jamie Vardy",
         avatar: "https://i.pravatar.cc/150?img=7"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
-      category: "Operations",
+      category: "Operações",
       image: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 42,
       comments: 11
     },
     {
       id: "5",
-      title: "Digital Marketing Trends for 2023",
-      excerpt: "The most effective digital marketing strategies and trends for businesses to adopt in 2023.",
+      title: "Tendências de Marketing Digital para 2023",
+      excerpt: "As estratégias de marketing digital mais eficazes e tendências para empresas adotarem em 2023.",
       content: "",
       author: {
         name: "Sam Peterson",
@@ -90,45 +90,34 @@ export default function Index() {
     },
     {
       id: "6",
-      title: "Remote Work Revolution: The New Normal",
-      excerpt: "How remote work is changing corporate culture and what it means for the future of employment.",
+      title: "Revolução do Trabalho Remoto: O Novo Normal",
+      excerpt: "Como o trabalho remoto está mudando a cultura corporativa e o que isso significa para o futuro do emprego.",
       content: "",
       author: {
         name: "Jordan Lee",
         avatar: "https://i.pravatar.cc/150?img=6"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-      category: "Workplace",
+      category: "Trabalho",
       image: "https://images.unsplash.com/photo-1608659597669-b45511779f93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 63,
       comments: 18
     },
     {
       id: "7",
-      title: "Blockchain Beyond Crypto: Business Applications",
-      excerpt: "Exploring the business applications of blockchain technology beyond cryptocurrencies.",
+      title: "Blockchain Além das Criptomoedas: Aplicações Empresariais",
+      excerpt: "Explorando as aplicações empresariais da tecnologia blockchain além das criptomoedas.",
       content: "",
       author: {
         name: "Alex Rivera",
         avatar: "https://i.pravatar.cc/150?img=10"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2.5).toISOString(),
-      category: "Technology",
+      category: "Tecnologia",
       image: "https://images.unsplash.com/photo-1621579311204-8667d02953fe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 51,
       comments: 13
     }
-  ];
-
-  const categories = [
-    { name: "Technology", count: 42 },
-    { name: "Finance", count: 38 },
-    { name: "Leadership", count: 27 },
-    { name: "Marketing", count: 25 },
-    { name: "Operations", count: 19 },
-    { name: "Workplace", count: 18 },
-    { name: "Strategy", count: 15 },
-    { name: "Innovation", count: 14 }
   ];
 
   return (
@@ -140,13 +129,13 @@ export default function Index() {
         <section className="py-16 md:py-24 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-16 animate-once animate-fade-in">
-              <h1 className="heading-xl max-w-3xl mb-6">Business Insights for Those Who Think Differently</h1>
+              <h1 className="heading-xl max-w-3xl mb-6">Insights de Negócios para Quem Pensa Diferente</h1>
               <p className="text-lg text-muted-foreground max-w-xl mb-8">
-                Cutting-edge analysis and perspectives on business, technology, and finance for forward-thinking professionals.
+                Análises e perspectivas de ponta sobre negócios, tecnologia e finanças para profissionais com visão de futuro.
               </p>
               <Button size="lg" asChild>
                 <Link to="/blogs">
-                  Explore Articles
+                  Explorar Artigos
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -167,9 +156,9 @@ export default function Index() {
         <section className="py-16 px-4 bg-secondary/30">
           <div className="container mx-auto">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="heading-lg animate-once animate-fade-in">Recent Articles</h2>
+              <h2 className="heading-lg animate-once animate-fade-in">Artigos Recentes</h2>
               <Button variant="outline" asChild className="animate-once animate-fade-in">
-                <Link to="/blogs">View All</Link>
+                <Link to="/blogs">Ver Todos</Link>
               </Button>
             </div>
             
@@ -183,42 +172,21 @@ export default function Index() {
           </div>
         </section>
         
-        {/* Categories */}
-        <section className="py-16 px-4">
-          <div className="container mx-auto">
-            <h2 className="heading-lg mb-8 animate-once animate-fade-in">Browse by Category</h2>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {categories.map((category, index) => (
-                <Link 
-                  key={category.name}
-                  to={`/category/${category.name.toLowerCase()}`}
-                  className="outliers-card flex flex-col items-center justify-center p-6 text-center hover:bg-secondary/40 animate-once animate-scale-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <h3 className="text-lg font-medium mb-1">{category.name}</h3>
-                  <p className="text-sm text-muted-foreground">{category.count} articles</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-        
         {/* Newsletter */}
         <section className="py-16 px-4 bg-secondary/30">
           <div className="container mx-auto max-w-2xl text-center animate-once animate-fade-in">
-            <h2 className="heading-lg mb-4">Stay Ahead of the Curve</h2>
+            <h2 className="heading-lg mb-4">Mantenha-se à Frente</h2>
             <p className="text-muted-foreground mb-6">
-              Join our newsletter and get the latest business insights delivered directly to your inbox.
+              Junte-se à nossa newsletter e receba os últimos insights de negócios diretamente na sua caixa de entrada.
             </p>
             <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <input
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Digite seu e-mail"
                 className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground"
                 required
               />
-              <Button type="submit">Subscribe</Button>
+              <Button type="submit">Inscrever-se</Button>
             </form>
           </div>
         </section>

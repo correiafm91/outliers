@@ -49,7 +49,7 @@ export default function BlogDetailPage() {
 
       setArticle(article as Article);
 
-      // Fetch the author
+      // Buscar o autor
       const { data: author, error: authorError } = await supabase
         .from("profiles")
         .select("*")
@@ -82,16 +82,17 @@ export default function BlogDetailPage() {
 
       if (error) throw error;
       
-      // Transform the data to match the Comment interface
+      // Transformar os dados para corresponder à interface Comment
       const formattedComments = data.map((item: any) => ({
         id: item.id,
         author: {
+          id: item.author.id,
           name: item.author.username,
           avatar: item.author.avatar_url || '',
         },
         content: item.content,
         created_at: item.created_at,
-        likes: 0, // Default likes count
+        likes: 0, // Contagem padrão de curtidas
       }));
 
       setComments(formattedComments);
@@ -102,6 +103,10 @@ export default function BlogDetailPage() {
 
   const handleCommentAdded = () => {
     fetchComments();
+  };
+  
+  const handleCommentDeleted = (commentId: string) => {
+    setComments(comments.filter(comment => comment.id !== commentId));
   };
 
   if (loading) {
@@ -168,7 +173,7 @@ export default function BlogDetailPage() {
             </div>
           </header>
           
-          {/* Featured Image */}
+          {/* Banner Image */}
           {article.image_url && (
             <div className="mb-10 animate-fade-in">
               <img 
@@ -222,7 +227,7 @@ export default function BlogDetailPage() {
             )}
             
             <div className="mt-12">
-              <CommentList comments={comments} />
+              <CommentList comments={comments} onCommentDelete={handleCommentDeleted} />
             </div>
           </section>
         </article>

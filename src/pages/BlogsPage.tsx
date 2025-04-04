@@ -19,19 +19,19 @@ export default function BlogsPage() {
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
 
-  // Mock data - will be replaced with Supabase data
+  // Dados fictícios - serão substituídos com dados do Supabase
   const allPosts: BlogPost[] = [
     {
       id: "1",
-      title: "The Future of AI in Business: Trends to Watch",
-      excerpt: "Artificial intelligence is reshaping how businesses operate. Here are the key trends to watch in the coming year.",
+      title: "O Futuro da IA nos Negócios: Tendências para Observar",
+      excerpt: "A inteligência artificial está remodelando como as empresas operam. Aqui estão as principais tendências para observar no próximo ano.",
       content: "",
       author: {
         name: "Alex Johnson",
         avatar: "https://i.pravatar.cc/150?img=1"
       },
       published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-      category: "Technology",
+      category: "Tecnologia",
       image: "https://images.unsplash.com/photo-1593642533144-3d62aa4783ec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80",
       likes: 128,
       comments: 47
@@ -143,20 +143,20 @@ export default function BlogsPage() {
     }
   ];
 
-  // Filter and sort posts
+  // Filtrar e ordenar posts
   const filteredPosts = allPosts
     .filter(post => {
-      // Filter by search query
+      // Filtrar por consulta de pesquisa
       const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Filter by category
+      // Filtrar por categoria
       const matchesCategory = category === "all" || post.category.toLowerCase() === category.toLowerCase();
       
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
-      // Sort by selected option
+      // Ordenar pela opção selecionada
       if (sortBy === "recent") {
         return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
       } else if (sortBy === "popular") {
@@ -167,7 +167,7 @@ export default function BlogsPage() {
       return 0;
     });
 
-  // Get unique categories
+  // Obter categorias únicas
   const categories = ["All", ...new Set(allPosts.map(post => post.category))];
 
   return (
@@ -178,19 +178,19 @@ export default function BlogsPage() {
         <section className="py-12 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-12 animate-fade-in">
-              <h1 className="heading-xl mb-4">Outliers Blog</h1>
+              <h1 className="heading-xl mb-4">Blog Outliers</h1>
               <p className="text-muted-foreground max-w-2xl">
-                Discover the latest insights, trends, and analysis from business experts and industry leaders.
+                Descubra os últimos insights, tendências e análises de especialistas em negócios e líderes do setor.
               </p>
             </div>
             
-            {/* Filters */}
+            {/* Filtros */}
             <div className="flex flex-col md:flex-row gap-4 mb-8 animate-fade-in">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search articles..."
+                  placeholder="Pesquisar artigos..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -200,10 +200,10 @@ export default function BlogsPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Category" />
+                    <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="all">Todas as Categorias</SelectItem>
                     {categories.map(cat => (
                       cat !== "All" && <SelectItem key={cat} value={cat.toLowerCase()}>{cat}</SelectItem>
                     ))}
@@ -212,12 +212,12 @@ export default function BlogsPage() {
                 
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Sort by" />
+                    <SelectValue placeholder="Ordenar por" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="recent">Most Recent</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="comments">Most Commented</SelectItem>
+                    <SelectItem value="recent">Mais Recentes</SelectItem>
+                    <SelectItem value="popular">Mais Populares</SelectItem>
+                    <SelectItem value="comments">Mais Comentados</SelectItem>
                   </SelectContent>
                 </Select>
                 
@@ -238,20 +238,20 @@ export default function BlogsPage() {
               </div>
             ) : (
               <div className="text-center py-12 animate-fade-in">
-                <p className="text-muted-foreground">No articles found matching your criteria.</p>
+                <p className="text-muted-foreground">Nenhum artigo encontrado que corresponda aos seus critérios.</p>
                 <Button variant="link" onClick={() => {setSearchQuery(""); setCategory("all");}}>
-                  Clear filters
+                  Limpar filtros
                 </Button>
               </div>
             )}
             
-            {/* Pagination */}
+            {/* Paginação */}
             <div className="flex justify-center mt-12 animate-fade-in">
-              <Button variant="outline" disabled>Previous</Button>
+              <Button variant="outline" disabled>Anterior</Button>
               <Button variant="outline" className="mx-2 bg-primary/10">1</Button>
               <Button variant="outline" className="mx-2">2</Button>
               <Button variant="outline" className="mx-2">3</Button>
-              <Button variant="outline">Next</Button>
+              <Button variant="outline">Próximo</Button>
             </div>
           </div>
         </section>
