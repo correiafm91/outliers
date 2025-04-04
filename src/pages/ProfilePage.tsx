@@ -20,7 +20,7 @@ import {
   Linkedin, 
   Youtube, 
   Facebook,
-  CheckVerified
+  CheckCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -34,6 +34,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Progress } from "@/components/ui/progress";
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +45,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   // Estado para edição
   const [editForm, setEditForm] = useState({
@@ -102,14 +106,7 @@ export default function ProfilePage() {
         
       if (articlesError) throw articlesError;
       
-      // Ajustar os dados para corresponder à interface Article
-      const formattedArticles: Article[] = articlesData.map(article => ({
-        ...article,
-        excerpt: article.excerpt || null,
-        published: true // Assumindo que todos os artigos listados são publicados
-      }));
-      
-      setUserArticles(formattedArticles);
+      setUserArticles(articlesData);
       
       // Verificar se o usuário atual é o proprietário do perfil
       if (user) {
@@ -130,6 +127,65 @@ export default function ProfilePage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !profile) return;
+    
+    try {
+      setUploadingAvatar(true);
+      setUploadProgress(10);
+      
+      // Validar tipo de arquivo e tamanho
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, envie apenas arquivos de imagem');
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        throw new Error('A imagem deve ter menos de 5MB');
+      }
+      
+      setUploadProgress(30);
+      
+      // Criar um nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      setUploadProgress(50);
+      
+      // Fazer upload para o storage
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      setUploadProgress(80);
+      
+      // Obter a URL pública
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+      
+      // Atualizar o estado e o formulário
+      const avatarUrl = data.publicUrl;
+      setEditForm(prev => ({
+        ...prev,
+        avatar_url: avatarUrl
+      }));
+      
+      setUploadProgress(100);
+      toast.success('Imagem enviada com sucesso');
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da imagem:', error.message);
+      toast.error(error.message || 'Erro ao fazer upload da imagem');
+    } finally {
+      setUploadingAvatar(false);
+      // Resetar o progresso após 1 segundo
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -233,14 +289,42 @@ export default function ProfilePage() {
                       </div>
                       
                       <div className="grid gap-2">
-                        <Label htmlFor="avatar_url">URL da foto de perfil</Label>
-                        <Input
-                          id="avatar_url"
-                          name="avatar_url"
-                          value={editForm.avatar_url}
-                          onChange={handleInputChange}
-                          placeholder="https://exemplo.com/imagem.jpg"
-                        />
+                        <Label>Foto de perfil</Label>
+                        <div className="flex flex-col space-y-2">
+                          {editForm.avatar_url && (
+                            <div className="w-20 h-20 mb-2 relative">
+                              <AspectRatio ratio={1 / 1} className="bg-muted rounded-md overflow-hidden">
+                                <img 
+                                  src={editForm.avatar_url} 
+                                  alt="Avatar" 
+                                  className="object-cover w-full h-full"
+                                />
+                              </AspectRatio>
+                            </div>
+                          )}
+                          
+                          <Label 
+                            htmlFor="avatar-upload" 
+                            className="cursor-pointer bg-secondary/50 hover:bg-secondary/70 transition-colors py-2 px-4 rounded text-center"
+                          >
+                            {uploadingAvatar ? "Enviando..." : "Enviar foto"}
+                          </Label>
+                          <Input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                            disabled={uploadingAvatar}
+                            className="hidden"
+                          />
+                          
+                          {uploadProgress > 0 && (
+                            <div className="w-full space-y-1">
+                              <Progress value={uploadProgress} className="w-full" />
+                              <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="grid gap-2">
@@ -312,7 +396,7 @@ export default function ProfilePage() {
                 <div className="flex items-center">
                   <h1 className="text-3xl font-bold">{profile.username}</h1>
                   {isVerified && (
-                    <CheckVerified className="h-5 w-5 ml-2 text-primary" />
+                    <CheckCircle className="h-5 w-5 ml-2 text-primary" fill="white" />
                   )}
                 </div>
                 
