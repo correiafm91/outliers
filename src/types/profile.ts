@@ -11,6 +11,7 @@ export interface Profile {
   youtube_url: string | null;
   facebook_url: string | null;
   is_verified?: boolean;
+  banner_url?: string | null;
 }
 
 export interface Article {

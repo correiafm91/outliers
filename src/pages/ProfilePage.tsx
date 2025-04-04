@@ -20,7 +20,10 @@ import {
   Linkedin, 
   Youtube, 
   Facebook,
-  CheckCircle
+  CheckCircle,
+  Trash,
+  Upload,
+  Image
 } from "lucide-react";
 import {
   Dialog,
@@ -36,6 +39,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -46,7 +60,9 @@ export default function ProfilePage() {
   const [isOwner, setIsOwner] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [bannerProgress, setBannerProgress] = useState(0);
   
   // Estado para edição
   const [editForm, setEditForm] = useState({
@@ -56,7 +72,8 @@ export default function ProfilePage() {
     instagram_url: '',
     linkedin_url: '',
     youtube_url: '',
-    facebook_url: ''
+    facebook_url: '',
+    banner_url: ''
   });
 
   useEffect(() => {
@@ -77,7 +94,8 @@ export default function ProfilePage() {
           instagram_url: profile.instagram_url || '',
           linkedin_url: profile.linkedin_url || '',
           youtube_url: profile.youtube_url || '',
-          facebook_url: profile.facebook_url || ''
+          facebook_url: profile.facebook_url || '',
+          banner_url: profile.banner_url || ''
         });
       }
     }
@@ -106,7 +124,7 @@ export default function ProfilePage() {
         
       if (articlesError) throw articlesError;
       
-      setUserArticles(articlesData);
+      setUserArticles(articlesData as Article[]);
       
       // Verificar se o usuário atual é o proprietário do perfil
       if (user) {
@@ -188,6 +206,65 @@ export default function ProfilePage() {
     }
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !profile) return;
+    
+    try {
+      setUploadingBanner(true);
+      setBannerProgress(10);
+      
+      // Validar tipo de arquivo e tamanho
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, envie apenas arquivos de imagem');
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        throw new Error('A imagem deve ter menos de 5MB');
+      }
+      
+      setBannerProgress(30);
+      
+      // Criar um nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `banner-${profile.id}-${Date.now()}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+      
+      setBannerProgress(50);
+      
+      // Fazer upload para o storage
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      setBannerProgress(80);
+      
+      // Obter a URL pública
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+      
+      // Atualizar o estado e o formulário
+      const bannerUrl = data.publicUrl;
+      setEditForm(prev => ({
+        ...prev,
+        banner_url: bannerUrl
+      }));
+      
+      setBannerProgress(100);
+      toast.success('Banner enviado com sucesso');
+    } catch (error: any) {
+      console.error('Erro ao fazer upload do banner:', error.message);
+      toast.error(error.message || 'Erro ao fazer upload do banner');
+    } finally {
+      setUploadingBanner(false);
+      // Resetar o progresso após 1 segundo
+      setTimeout(() => setBannerProgress(0), 1000);
+    }
+  };
+
   const handleSaveProfile = async () => {
     try {
       const { error } = await supabase
@@ -199,7 +276,8 @@ export default function ProfilePage() {
           instagram_url: editForm.instagram_url,
           linkedin_url: editForm.linkedin_url,
           youtube_url: editForm.youtube_url,
-          facebook_url: editForm.facebook_url
+          facebook_url: editForm.facebook_url,
+          banner_url: editForm.banner_url
         })
         .eq("id", profile?.id);
       
@@ -211,6 +289,24 @@ export default function ProfilePage() {
     } catch (error: any) {
       console.error("Erro ao atualizar o perfil:", error.message);
       toast.error("Não foi possível atualizar o perfil");
+    }
+  };
+
+  const handleDeleteArticle = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from("articles")
+        .delete()
+        .eq("id", articleId);
+
+      if (error) throw error;
+
+      // Atualizar a lista de artigos após a exclusão
+      setUserArticles(prevArticles => prevArticles.filter(article => article.id !== articleId));
+      toast.success("Artigo excluído com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao excluir artigo:", error.message);
+      toast.error("Não foi possível excluir o artigo");
     }
   };
 
@@ -250,11 +346,38 @@ export default function ProfilePage() {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           {/* Banner do perfil */}
-          <div className="w-full h-48 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-lg mb-12"></div>
+          <div className="w-full h-48 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-lg mb-12 relative overflow-hidden">
+            {profile.banner_url && (
+              <img 
+                src={profile.banner_url} 
+                alt="Banner do perfil" 
+                className="w-full h-full object-cover"
+              />
+            )}
+            {isOwner && (
+              <div className="absolute bottom-2 right-2">
+                <Label 
+                  htmlFor="banner-upload" 
+                  className="cursor-pointer bg-background/80 hover:bg-background/90 transition-colors py-2 px-4 rounded text-center flex items-center gap-2"
+                >
+                  <Image className="h-4 w-4" />
+                  {uploadingBanner ? "Enviando..." : "Alterar banner"}
+                </Label>
+                <Input
+                  id="banner-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerUpload}
+                  disabled={uploadingBanner}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </div>
           
           {/* Perfil */}
           <div className="flex flex-col md:flex-row gap-8 items-start mb-12">
-            <div className="flex flex-col items-center -mt-16">
+            <div className="flex flex-col items-center -mt-16 z-10">
               <Avatar className="h-32 w-32 border-4 border-background">
                 <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
                 <AvatarFallback className="text-4xl">
@@ -305,9 +428,10 @@ export default function ProfilePage() {
                           
                           <Label 
                             htmlFor="avatar-upload" 
-                            className="cursor-pointer bg-secondary/50 hover:bg-secondary/70 transition-colors py-2 px-4 rounded text-center"
+                            className="cursor-pointer bg-secondary/50 hover:bg-secondary/70 transition-colors py-2 px-4 rounded text-center flex items-center gap-2"
                           >
-                            {uploadingAvatar ? "Enviando..." : "Enviar foto"}
+                            <Upload className="h-4 w-4" />
+                            {uploadingAvatar ? "Enviando..." : "Fazer upload de foto"}
                           </Label>
                           <Input
                             id="avatar-upload"
@@ -477,21 +601,50 @@ export default function ProfilePage() {
               {userArticles.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 mb-8">
                   {userArticles.map((article) => (
-                    <BlogCard key={article.id} post={{
-                      id: article.id,
-                      title: article.title,
-                      excerpt: article.excerpt || "",
-                      content: article.content,
-                      author: {
-                        name: profile.username,
-                        avatar: profile.avatar_url || ""
-                      },
-                      published_at: article.created_at,
-                      category: article.sector || "Geral",
-                      image: article.image_url || "",
-                      likes: 0,
-                      comments: 0
-                    }} />
+                    <div key={article.id} className="relative">
+                      {isOwner && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="destructive" 
+                              size="icon"
+                              className="absolute top-2 right-2 z-10"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir artigo</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteArticle(article.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                      <BlogCard post={{
+                        id: article.id,
+                        title: article.title,
+                        excerpt: article.excerpt || "",
+                        content: article.content,
+                        author: {
+                          name: profile.username,
+                          avatar: profile.avatar_url || ""
+                        },
+                        published_at: article.created_at,
+                        category: article.sector || "Geral",
+                        image: article.image_url || "",
+                        likes: 0,
+                        comments: 0
+                      }} />
+                    </div>
                   ))}
                 </div>
               ) : (
