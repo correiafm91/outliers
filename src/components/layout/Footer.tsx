@@ -16,9 +16,6 @@ export function Footer() {
               />
               <span className="text-xl font-bold">Outliers</span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Onde os insights de negócios encontram o excepcional. Mantenha-se à frente com análises de ponta e perspectivas do setor.
-            </p>
           </div>
           <div>
             <h3 className="text-lg font-medium">Navegação</h3>

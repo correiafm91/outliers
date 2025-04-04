@@ -19,7 +19,8 @@ import {
   Instagram, 
   Linkedin, 
   Youtube, 
-  Facebook 
+  Facebook,
+  CheckVerified
 } from "lucide-react";
 import {
   Dialog,
@@ -72,7 +73,7 @@ export default function ProfilePage() {
           instagram_url: profile.instagram_url || '',
           linkedin_url: profile.linkedin_url || '',
           youtube_url: profile.youtube_url || '',
-          facebook_url: ''
+          facebook_url: profile.facebook_url || ''
         });
       }
     }
@@ -92,7 +93,7 @@ export default function ProfilePage() {
       if (profileError) throw profileError;
       setProfile(profileData);
       
-      // Buscar artigos do usuário
+      // Buscar artigos do usuário, ordenados por data mais recente
       const { data: articlesData, error: articlesError } = await supabase
         .from("articles")
         .select("*")
@@ -100,7 +101,15 @@ export default function ProfilePage() {
         .order("created_at", { ascending: false });
         
       if (articlesError) throw articlesError;
-      setUserArticles(articlesData);
+      
+      // Ajustar os dados para corresponder à interface Article
+      const formattedArticles: Article[] = articlesData.map(article => ({
+        ...article,
+        excerpt: article.excerpt || null,
+        published: true // Assumindo que todos os artigos listados são publicados
+      }));
+      
+      setUserArticles(formattedArticles);
       
       // Verificar se o usuário atual é o proprietário do perfil
       if (user) {
@@ -133,7 +142,8 @@ export default function ProfilePage() {
           avatar_url: editForm.avatar_url,
           instagram_url: editForm.instagram_url,
           linkedin_url: editForm.linkedin_url,
-          youtube_url: editForm.youtube_url
+          youtube_url: editForm.youtube_url,
+          facebook_url: editForm.facebook_url
         })
         .eq("id", profile?.id);
       
@@ -175,6 +185,8 @@ export default function ProfilePage() {
     );
   }
 
+  const isVerified = profile.username === "Outliers Ofc";
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
@@ -182,12 +194,12 @@ export default function ProfilePage() {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           {/* Banner do perfil */}
-          <div className="w-full h-48 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-lg mb-8"></div>
+          <div className="w-full h-48 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-lg mb-12"></div>
           
           {/* Perfil */}
           <div className="flex flex-col md:flex-row gap-8 items-start mb-12">
-            <div className="flex flex-col items-center">
-              <Avatar className="h-32 w-32 border-4 border-background -mt-16">
+            <div className="flex flex-col items-center -mt-16">
+              <Avatar className="h-32 w-32 border-4 border-background">
                 <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
                 <AvatarFallback className="text-4xl">
                   {profile.username.slice(0, 2).toUpperCase()}
@@ -209,7 +221,7 @@ export default function ProfilePage() {
                         Atualize suas informações de perfil. Clique em salvar quando terminar.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
                       <div className="grid gap-2">
                         <Label htmlFor="username">Nome de usuário</Label>
                         <Input
@@ -274,6 +286,17 @@ export default function ProfilePage() {
                           placeholder="https://youtube.com/@seu_canal"
                         />
                       </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="facebook_url">Facebook</Label>
+                        <Input
+                          id="facebook_url"
+                          name="facebook_url"
+                          value={editForm.facebook_url}
+                          onChange={handleInputChange}
+                          placeholder="https://facebook.com/seu_perfil"
+                        />
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
@@ -286,17 +309,21 @@ export default function ProfilePage() {
             
             <div className="flex-1">
               <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div>
+                <div className="flex items-center">
                   <h1 className="text-3xl font-bold">{profile.username}</h1>
-                  <div className="flex items-center mt-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
-                  </div>
+                  {isVerified && (
+                    <CheckVerified className="h-5 w-5 ml-2 text-primary" />
+                  )}
                 </div>
                 
                 <div className="flex gap-2">
                   <Badge variant="outline">{profile.sector || "Área não especificada"}</Badge>
                 </div>
+              </div>
+              
+              <div className="flex items-center mt-2 text-muted-foreground">
+                <Calendar className="h-4 w-4 mr-1" />
+                <span className="text-sm">Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
               </div>
               
               {/* Bio */}
@@ -338,6 +365,17 @@ export default function ProfilePage() {
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <Youtube className="h-5 w-5" />
+                  </a>
+                )}
+
+                {profile.facebook_url && (
+                  <a 
+                    href={profile.facebook_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Facebook className="h-5 w-5" />
                   </a>
                 )}
               </div>
@@ -399,7 +437,7 @@ export default function ProfilePage() {
                   <div>
                     <h4 className="font-medium mb-2">Redes Sociais</h4>
                     <div className="flex flex-col gap-2">
-                      {(profile.instagram_url || profile.linkedin_url || profile.youtube_url) ? (
+                      {(profile.instagram_url || profile.linkedin_url || profile.youtube_url || profile.facebook_url) ? (
                         <>
                           {profile.instagram_url && (
                             <a 
@@ -431,6 +469,17 @@ export default function ProfilePage() {
                               className="flex items-center text-muted-foreground hover:text-foreground"
                             >
                               <Youtube className="h-4 w-4 mr-2" /> YouTube
+                            </a>
+                          )}
+
+                          {profile.facebook_url && (
+                            <a 
+                              href={profile.facebook_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Facebook className="h-4 w-4 mr-2" /> Facebook
                             </a>
                           )}
                         </>

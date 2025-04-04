@@ -9,6 +9,8 @@ export interface Profile {
   instagram_url: string | null;
   linkedin_url: string | null;
   youtube_url: string | null;
+  facebook_url: string | null;
+  is_verified?: boolean;
 }
 
 export interface Article {
