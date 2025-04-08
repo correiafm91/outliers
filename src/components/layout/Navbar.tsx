@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, Search, Bell, User, PenSquare, Bookmark } from "lucide-react";
+import { Menu, Search, Bell, User, PenSquare, Bookmark, Twitter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,7 @@ export function Navbar() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationsList, setNotificationsList] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
 
@@ -36,6 +38,7 @@ export function Navbar() {
     if (!user) return;
     
     try {
+      // First get count for badge
       const { count, error } = await supabase
         .from("notifications")
         .select("*", { count: "exact" })
@@ -43,13 +46,58 @@ export function Navbar() {
         .eq("read", false);
 
       if (error) {
-        console.error("Erro ao buscar notificações:", error);
+        console.error("Error fetching notification count:", error);
         return;
       }
 
       setUnreadNotifications(count || 0);
+      
+      // Now get the actual notifications with related info
+      const { data: notifications, error: notifError } = await supabase
+        .from("notifications")
+        .select(`
+          id, 
+          type, 
+          read, 
+          created_at,
+          article_id,
+          actor_id,
+          profiles!actor_id (username, avatar_url)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+        
+      if (notifError) {
+        console.error("Error fetching notifications:", notifError);
+        return;
+      }
+      
+      setNotificationsList(notifications || []);
     } catch (error) {
-      console.error("Erro em fetchUnreadNotifications:", error);
+      console.error("Error in fetchUnreadNotifications:", error);
+    }
+  };
+  
+  const handleNotificationClick = async (notificationId: string, articleId: string | null) => {
+    try {
+      // Mark notification as read
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId);
+        
+      if (error) throw error;
+      
+      // Navigate to article if we have an ID
+      if (articleId) {
+        navigate(`/blog/${articleId}`);
+      }
+      
+      // Refresh notifications count
+      fetchUnreadNotifications();
+    } catch (error) {
+      console.error("Error updating notification:", error);
     }
   };
 
@@ -58,7 +106,7 @@ export function Navbar() {
       await signOut();
       navigate("/auth");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Error logging out:", error);
     }
   };
 
@@ -117,23 +165,62 @@ export function Navbar() {
                 <Bookmark className="h-5 w-5" />
               </Button>
               
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative" 
-                onClick={() => navigate(`/profile/${user.id}`)}
-                title="Notificações"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadNotifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="relative"
+                    title="Notificações"
                   >
-                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                  </Badge>
-                )}
-              </Button>
+                    <Bell className="h-5 w-5" />
+                    {unreadNotifications > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                      >
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {notificationsList.length > 0 ? (
+                    notificationsList.map(notif => (
+                      <DropdownMenuItem 
+                        key={notif.id} 
+                        className={`p-3 cursor-pointer ${!notif.read ? 'bg-secondary/40' : ''}`}
+                        onClick={() => handleNotificationClick(notif.id, notif.article_id)}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={notif.profiles?.avatar_url || ""} />
+                            <AvatarFallback>{notif.profiles?.username?.slice(0, 2) || "??"}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm">
+                              <span className="font-medium">{notif.profiles?.username}</span>
+                              {notif.type === 'like' && ' curtiu seu artigo'}
+                              {notif.type === 'comment' && ' comentou em seu artigo'}
+                              {notif.type === 'follow' && ' começou a seguir você'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(notif.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Nenhuma notificação
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

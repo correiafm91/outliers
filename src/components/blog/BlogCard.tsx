@@ -21,6 +21,7 @@ export interface BlogPost {
   image: string;
   likes: number;
   comments: number;
+  aspect_ratio?: string; // New field to handle image aspect ratio
 }
 
 interface BlogCardProps {
@@ -45,12 +46,15 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
   };
 
   const formattedDate = formatDistanceToNow(new Date(post.published_at), { addSuffix: true });
+  
+  // Handle aspect ratio
+  const aspectRatio = post.aspect_ratio || "16/9";
 
   if (featured) {
     return (
       <div className={`outliers-card h-full overflow-hidden group ${className} animate-once animate-fade-in`}>
         <div className="flex flex-col h-full">
-          <div className="relative h-72 overflow-hidden rounded-md">
+          <div className="relative overflow-hidden rounded-md" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
             <img 
               src={post.image} 
               alt={post.title} 
@@ -101,7 +105,7 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
   return (
     <div className={`outliers-card group ${className} animate-once animate-fade-in`}>
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="sm:w-1/3 h-48 sm:h-auto relative overflow-hidden rounded-md">
+        <div className="sm:w-1/3 overflow-hidden rounded-md" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
           <img 
             src={post.image} 
             alt={post.title} 

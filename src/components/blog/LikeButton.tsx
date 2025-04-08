@@ -35,12 +35,15 @@ export function LikeButton({
       // Only check if the current user liked it if they're logged in
       if (user) {
         checkIfLiked();
+      } else {
+        // If user not logged in, we're not waiting for anything
+        setIsLoading(false);
       }
     }
   }, [articleId, user]);
 
   const checkIfLiked = async () => {
-    if (!user) return;
+    if (!user || !articleId) return;
     
     try {
       setIsLoading(true);
@@ -56,13 +59,15 @@ export function LikeButton({
       
       setIsLiked(!!data);
     } catch (error) {
-      console.error("Erro ao verificar se artigo está curtido:", error);
+      console.error("Error checking if article is liked:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getLikeCount = async () => {
+    if (!articleId) return;
+    
     try {
       const { count, error } = await supabase
         .from("likes")
@@ -73,7 +78,7 @@ export function LikeButton({
       
       setLikeCount(count || 0);
     } catch (error) {
-      console.error("Erro ao contar curtidas:", error);
+      console.error("Error counting likes:", error);
     }
   };
 
@@ -82,6 +87,8 @@ export function LikeButton({
       toast.error("Você precisa estar logado para curtir artigos");
       return;
     }
+
+    if (!articleId) return;
 
     try {
       setIsLoading(true);
@@ -97,7 +104,7 @@ export function LikeButton({
         if (error) throw error;
         
         setIsLiked(false);
-        setLikeCount(prev => prev - 1);
+        setLikeCount(prev => Math.max(0, prev - 1));
       } else {
         // Add like
         const { error } = await supabase
@@ -125,12 +132,12 @@ export function LikeButton({
                 read: false
               });
           } catch (notifError) {
-            console.error("Erro ao criar notificação:", notifError);
+            console.error("Error creating notification:", notifError);
           }
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar curtida");
+      toast.error(error.message || "Error updating like");
     } finally {
       setIsLoading(false);
     }

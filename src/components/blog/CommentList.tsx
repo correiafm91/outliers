@@ -35,9 +35,19 @@ export interface Comment {
 interface CommentListProps {
   comments: Comment[];
   onCommentDelete?: (id: string) => void;
+  articleId?: string; // Add article ID to refresh comments
 }
 
-export function CommentList({ comments, onCommentDelete }: CommentListProps) {
+export function CommentList({ comments, onCommentDelete, articleId }: CommentListProps) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Refresh component when articleId changes
+  useEffect(() => {
+    if (articleId) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [articleId]);
+
   if (comments.length === 0) {
     return (
       <div className="text-center py-8">
@@ -47,7 +57,7 @@ export function CommentList({ comments, onCommentDelete }: CommentListProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={refreshKey}>
       {comments.map((comment) => (
         <CommentItem 
           key={comment.id} 
@@ -65,6 +75,11 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
   const { user } = useAuth();
   
   const handleLike = () => {
+    if (!user) {
+      toast.error("Você precisa estar logado para curtir comentários");
+      return;
+    }
+    
     setIsLiked(!isLiked);
     setLikeCount(prevCount => isLiked ? prevCount - 1 : prevCount + 1);
   };

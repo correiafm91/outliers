@@ -10,6 +10,7 @@ export interface Profile {
   linkedin_url: string | null;
   youtube_url: string | null;
   facebook_url: string | null;
+  twitter_url: string | null;
   is_verified?: boolean;
   banner_url?: string | null;
 }
@@ -25,6 +26,7 @@ export interface Article {
   updated_at: string | null;
   published: boolean;
   author_id: string;
+  aspect_ratio?: string; // New field to handle image aspect ratio
 }
 
 export interface SavedArticle {
