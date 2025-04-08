@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -70,7 +69,6 @@ export default function ProfilePage() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   
-  // Estado para edição
   const [editForm, setEditForm] = useState({
     username: '',
     bio: '',
@@ -113,7 +111,6 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       
-      // Buscar perfil
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -122,7 +119,6 @@ export default function ProfilePage() {
       
       if (profileError) throw profileError;
       
-      // Buscar artigos do usuário, ordenados por data mais recente
       const { data: articlesData, error: articlesError } = await supabase
         .from("articles")
         .select("*")
@@ -131,7 +127,6 @@ export default function ProfilePage() {
         
       if (articlesError) throw articlesError;
       
-      // Buscar contagem de seguidores
       const { count: followersCount, error: followersError } = await supabase
         .from("followers")
         .select("id", { count: 'exact', head: true })
@@ -139,7 +134,6 @@ export default function ProfilePage() {
         
       if (followersError) throw followersError;
       
-      // Buscar contagem de seguindo
       const { count: followingCount, error: followingError } = await supabase
         .from("followers")
         .select("id", { count: 'exact', head: true })
@@ -157,7 +151,6 @@ export default function ProfilePage() {
       setFollowingCount(followingCount || 0);
       setUserArticles(articlesData as Article[]);
       
-      // Verificar se o usuário atual é o proprietário do perfil
       if (user) {
         setIsOwner(user.id === id);
       }
@@ -186,7 +179,6 @@ export default function ProfilePage() {
       setUploadingAvatar(true);
       setUploadProgress(10);
       
-      // Validar tipo de arquivo e tamanho
       if (!file.type.startsWith('image/')) {
         throw new Error('Por favor, envie apenas arquivos de imagem');
       }
@@ -197,14 +189,12 @@ export default function ProfilePage() {
       
       setUploadProgress(30);
       
-      // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
       
       setUploadProgress(50);
       
-      // Fazer upload para o storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
@@ -213,12 +203,10 @@ export default function ProfilePage() {
       
       setUploadProgress(80);
       
-      // Obter a URL pública
       const { data } = supabase.storage
         .from('profiles')
         .getPublicUrl(filePath);
       
-      // Atualizar o estado e o formulário
       const avatarUrl = data.publicUrl;
       setEditForm(prev => ({
         ...prev,
@@ -232,7 +220,6 @@ export default function ProfilePage() {
       toast.error(error.message || 'Erro ao fazer upload da imagem');
     } finally {
       setUploadingAvatar(false);
-      // Resetar o progresso após 1 segundo
       setTimeout(() => setUploadProgress(0), 1000);
     }
   };
@@ -245,7 +232,6 @@ export default function ProfilePage() {
       setUploadingBanner(true);
       setBannerProgress(10);
       
-      // Validar tipo de arquivo e tamanho
       if (!file.type.startsWith('image/')) {
         throw new Error('Por favor, envie apenas arquivos de imagem');
       }
@@ -256,14 +242,12 @@ export default function ProfilePage() {
       
       setBannerProgress(30);
       
-      // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `banner-${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `banners/${fileName}`;
       
       setBannerProgress(50);
       
-      // Fazer upload para o storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
@@ -272,17 +256,31 @@ export default function ProfilePage() {
       
       setBannerProgress(80);
       
-      // Obter a URL pública
       const { data } = supabase.storage
         .from('profiles')
         .getPublicUrl(filePath);
       
-      // Atualizar o estado e o formulário
       const bannerUrl = data.publicUrl;
       setEditForm(prev => ({
         ...prev,
         banner_url: bannerUrl
       }));
+      
+      if (profile) {
+        setProfile({
+          ...profile,
+          banner_url: bannerUrl
+        });
+        
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            banner_url: bannerUrl
+          })
+          .eq("id", profile.id);
+          
+        if (error) throw error;
+      }
       
       setBannerProgress(100);
       toast.success('Banner enviado com sucesso');
@@ -291,7 +289,6 @@ export default function ProfilePage() {
       toast.error(error.message || 'Erro ao fazer upload do banner');
     } finally {
       setUploadingBanner(false);
-      // Resetar o progresso após 1 segundo
       setTimeout(() => setBannerProgress(0), 1000);
     }
   };
@@ -316,7 +313,7 @@ export default function ProfilePage() {
       if (error) throw error;
       
       toast.success("Perfil atualizado com sucesso");
-      fetchProfileData(); // Atualizar dados
+      fetchProfileData();
       setEditDialogOpen(false);
     } catch (error: any) {
       console.error("Erro ao atualizar o perfil:", error.message);
@@ -333,12 +330,11 @@ export default function ProfilePage() {
 
       if (error) throw error;
 
-      // Atualizar a lista de artigos após a exclusão
       setUserArticles(prevArticles => prevArticles.filter(article => article.id !== articleId));
-      toast.success("Artigo excluído com sucesso");
+      toast.success("Publicação excluída com sucesso");
     } catch (error: any) {
-      console.error("Erro ao excluir artigo:", error.message);
-      toast.error("Não foi possível excluir o artigo");
+      console.error("Erro ao excluir publicação:", error.message);
+      toast.error("Não foi possível excluir a publicação");
     }
   };
 
@@ -377,19 +373,12 @@ export default function ProfilePage() {
       
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
-          {/* Banner do perfil */}
           <div className="w-full h-48 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-lg mb-12 relative overflow-hidden">
             {profile.banner_url && (
               <img 
                 src={profile.banner_url} 
                 alt="Banner do perfil" 
                 className="w-full h-full object-cover"
-                onError={() => {
-                  // If image fails to load, clear the banner URL to show the gradient
-                  if (profile) {
-                    setProfile({...profile, banner_url: null});
-                  }
-                }}
               />
             )}
             {isOwner && (
@@ -409,11 +398,16 @@ export default function ProfilePage() {
                   disabled={uploadingBanner}
                   className="hidden"
                 />
+                
+                {bannerProgress > 0 && (
+                  <div className="absolute bottom-12 right-0 left-0 mx-4">
+                    <Progress value={bannerProgress} className="w-full" />
+                  </div>
+                )}
               </div>
             )}
           </div>
           
-          {/* Perfil */}
           <div className="flex flex-col md:flex-row gap-8 items-start mb-12">
             <div className="flex flex-col items-center -mt-16 z-10">
               <Avatar className="h-32 w-32 border-4 border-background">
@@ -484,6 +478,44 @@ export default function ProfilePage() {
                             <div className="w-full space-y-1">
                               <Progress value={uploadProgress} className="w-full" />
                               <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label>Banner de perfil</Label>
+                        <div className="flex flex-col space-y-2">
+                          {editForm.banner_url && (
+                            <div className="w-full h-24 mb-2 relative">
+                              <img 
+                                src={editForm.banner_url} 
+                                alt="Banner" 
+                                className="object-cover w-full h-full rounded"
+                              />
+                            </div>
+                          )}
+                          
+                          <Label 
+                            htmlFor="banner-upload-dialog" 
+                            className="cursor-pointer bg-secondary/50 hover:bg-secondary/70 transition-colors py-2 px-4 rounded text-center flex items-center gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {uploadingBanner ? "Enviando..." : "Fazer upload de banner"}
+                          </Label>
+                          <Input
+                            id="banner-upload-dialog"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleBannerUpload}
+                            disabled={uploadingBanner}
+                            className="hidden"
+                          />
+                          
+                          {bannerProgress > 0 && (
+                            <div className="w-full space-y-1">
+                              <Progress value={bannerProgress} className="w-full" />
+                              <p className="text-xs text-muted-foreground text-right">{bannerProgress}%</p>
                             </div>
                           )}
                         </div>
@@ -569,7 +601,10 @@ export default function ProfilePage() {
                 <div className="flex items-center">
                   <h1 className="text-3xl font-bold">{profile.username}</h1>
                   {isVerified && (
-                    <CheckCircle className="h-5 w-5 ml-2 text-primary" fill="white" />
+                    <Badge variant="verified" className="ml-2">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verificado
+                    </Badge>
                   )}
                 </div>
                 
@@ -583,7 +618,6 @@ export default function ProfilePage() {
                 <span className="text-sm">Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
               </div>
               
-              {/* Followers/Following Counter */}
               <div className="mt-3">
                 <FollowersDialog 
                   userId={profile.id}
@@ -592,14 +626,12 @@ export default function ProfilePage() {
                 />
               </div>
               
-              {/* Bio */}
               {profile.bio && (
                 <div className="mt-4">
                   <p className="text-muted-foreground whitespace-pre-line">{profile.bio}</p>
                 </div>
               )}
               
-              {/* Redes sociais */}
               <div className="flex gap-4 mt-6">
                 {profile.instagram_url && (
                   <a 
@@ -659,10 +691,9 @@ export default function ProfilePage() {
             </div>
           </div>
           
-          {/* Abas de conteúdo */}
           <Tabs defaultValue="articles" className="mt-6">
             <TabsList className="mb-8">
-              <TabsTrigger value="articles">Artigos</TabsTrigger>
+              <TabsTrigger value="articles">Publicações</TabsTrigger>
               <TabsTrigger value="about">Sobre</TabsTrigger>
             </TabsList>
             
@@ -693,9 +724,9 @@ export default function ProfilePage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir artigo</AlertDialogTitle>
+                                <AlertDialogTitle>Excluir publicação</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -723,17 +754,17 @@ export default function ProfilePage() {
                         video: article.video_url || "",
                         likes: 0,
                         comments: 0,
-                        aspect_ratio: article.aspect_ratio
+                        aspect_ratio: article.aspect_ratio || "16:9"
                       }} />
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">Este usuário ainda não publicou nenhum artigo.</p>
+                  <p className="text-muted-foreground mb-4">Este usuário ainda não publicou nada.</p>
                   {isOwner && (
                     <Button asChild>
-                      <Link to="/new-article">Publicar um artigo</Link>
+                      <Link to="/new-article">Criar uma publicação</Link>
                     </Button>
                   )}
                 </div>

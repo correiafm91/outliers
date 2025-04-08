@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Image, Loader2, Video } from "lucide-react";
-import { Article } from "@/types/profile";
 
 type SectorType = "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment" | "other";
 type AspectRatioType = "16:9" | "4:3" | "1:1" | "3:2";
@@ -21,11 +20,9 @@ export default function EditArticlePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [article, setArticle] = useState<Article | null>(null);
+  const [article, setArticle] = useState<any | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [sector, setSector] = useState<SectorType>("other");
-  const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("16:9");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -33,6 +30,7 @@ export default function EditArticlePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mediaType, setMediaType] = useState<"image" | "video" | "none">("none");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("16:9");
 
   useEffect(() => {
     if (!user) {
@@ -56,20 +54,19 @@ export default function EditArticlePage() {
       if (error) throw error;
 
       if (data.author_id !== user?.id) {
-        toast.error("Você não tem permissão para editar este artigo");
+        toast.error("Você não tem permissão para editar esta publicação");
         navigate(-1);
         return;
       }
 
-      setArticle(data as Article);
+      setArticle(data);
       setTitle(data.title);
       setContent(data.content);
-      setSector(data.sector as SectorType);
-      setAspectRatio((data.aspect_ratio as AspectRatioType) || "16:9");
       
       if (data.image_url) {
         setImagePreview(data.image_url);
         setMediaType("image");
+        setAspectRatio((data.aspect_ratio as AspectRatioType) || "16:9");
       }
       
       if (data.video_url) {
@@ -79,7 +76,7 @@ export default function EditArticlePage() {
       
       setIsLoading(false);
     } catch (error: any) {
-      toast.error(error.message || "Erro ao carregar artigo");
+      toast.error(error.message || "Erro ao carregar publicação");
       navigate("/profile/" + user?.id);
     }
   };
@@ -113,7 +110,7 @@ export default function EditArticlePage() {
       return;
     }
 
-    if (!title.trim() || !content.trim() || !sector) {
+    if (!title.trim() || !content.trim()) {
       toast.error("Por favor preencha todos os campos obrigatórios");
       return;
     }
@@ -167,7 +164,6 @@ export default function EditArticlePage() {
         .update({
           title,
           content,
-          sector,
           image_url: imageUrl,
           video_url: videoUrl,
           aspect_ratio: mediaType === "image" ? aspectRatio : null,
@@ -177,10 +173,10 @@ export default function EditArticlePage() {
 
       if (error) throw error;
       
-      toast.success("Artigo atualizado com sucesso!");
+      toast.success("Publicação atualizada com sucesso!");
       navigate(`/blog/${article.id}`);
     } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar artigo");
+      toast.error(error.message || "Erro ao atualizar publicação");
       setIsSubmitting(false);
     }
   };
@@ -191,7 +187,7 @@ export default function EditArticlePage() {
         <Navbar />
         <div className="container mx-auto px-4 py-8 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <p className="ml-2">Carregando artigo...</p>
+          <p className="ml-2">Carregando publicação...</p>
         </div>
       </div>
     );
@@ -203,7 +199,7 @@ export default function EditArticlePage() {
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
-            <CardTitle>Editar Artigo</CardTitle>
+            <CardTitle>Editar Publicação</CardTitle>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
@@ -213,33 +209,9 @@ export default function EditArticlePage() {
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Digite o título do seu artigo"
+                  placeholder="Digite o título da sua publicação"
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sector">Área *</Label>
-                <Select
-                  value={sector}
-                  onValueChange={(value) => setSector(value as SectorType)}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma área" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technology">Tecnologia</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="gastronomy">Gastronomia</SelectItem>
-                    <SelectItem value="education">Educação</SelectItem>
-                    <SelectItem value="finance">Finanças</SelectItem>
-                    <SelectItem value="health">Saúde</SelectItem>
-                    <SelectItem value="sports">Esportes</SelectItem>
-                    <SelectItem value="entertainment">Entretenimento</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -373,7 +345,7 @@ export default function EditArticlePage() {
                   id="content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Escreva o conteúdo do seu artigo"
+                  placeholder="Escreva o conteúdo da sua publicação"
                   className="min-h-[200px]"
                   required
                 />
@@ -394,7 +366,7 @@ export default function EditArticlePage() {
                     Salvando...
                   </>
                 ) : (
-                  "Atualizar Artigo"
+                  "Atualizar Publicação"
                 )}
               </Button>
             </CardFooter>

@@ -17,7 +17,9 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
         notification:
-          "border-transparent bg-white/20 backdrop-blur-sm text-white", // New notification variant
+          "border-transparent bg-white/20 backdrop-blur-sm text-white", 
+        verified:
+          "border-transparent bg-blue-500/20 backdrop-blur-sm text-blue-500", // New verified badge variant
       },
     },
     defaultVariants: {

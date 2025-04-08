@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
-import { Follower, Profile } from "@/types/profile";
+import { Profile } from "@/types/profile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { FollowButton } from './FollowButton';
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Users } from "lucide-react";
+
+interface Follower {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+  follower_profile?: Profile;
+  following_profile?: Profile;
+}
 
 interface FollowersDialogProps {
   userId: string;
@@ -36,7 +45,7 @@ export function FollowersDialog({
     
     setLoading(true);
     try {
-      // Fetch followers
+      // Fetch followers with nested profiles
       const { data: followersData, error: followersError } = await supabase
         .from('followers')
         .select(`
@@ -44,7 +53,7 @@ export function FollowersDialog({
           follower_id,
           following_id,
           created_at,
-          follower_profile:profiles!follower_id(*)
+          follower_profile:profiles!follower_id(id, username, avatar_url)
         `)
         .eq('following_id', userId)
         .order('created_at', { ascending: false });
@@ -52,7 +61,7 @@ export function FollowersDialog({
       if (followersError) throw followersError;
       setFollowersList(followersData || []);
       
-      // Fetch following
+      // Fetch following with nested profiles
       const { data: followingData, error: followingError } = await supabase
         .from('followers')
         .select(`
@@ -60,7 +69,7 @@ export function FollowersDialog({
           follower_id,
           following_id,
           created_at,
-          following_profile:profiles!following_id(*)
+          following_profile:profiles!following_id(id, username, avatar_url)
         `)
         .eq('follower_id', userId)
         .order('created_at', { ascending: false });
@@ -115,16 +124,19 @@ export function FollowersDialog({
                   <div key={follower.id} className="flex items-center justify-between">
                     <Link to={`/profile/${follower.follower_id}`} className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={follower.follower_profile?.avatar_url || undefined} />
+                        <AvatarImage 
+                          src={follower.follower_profile?.avatar_url || undefined} 
+                          alt={follower.follower_profile?.username || ''}
+                        />
                         <AvatarFallback>
-                          {follower.follower_profile?.username.slice(0, 2).toUpperCase()}
+                          {follower.follower_profile?.username?.slice(0, 2).toUpperCase() || '??'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{follower.follower_profile?.username}</p>
+                        <p className="font-medium">{follower.follower_profile?.username || 'Usuário'}</p>
                       </div>
                     </Link>
-                    {user && (
+                    {user && follower.follower_id !== user.id && (
                       <FollowButton 
                         userId={user.id} 
                         targetUserId={follower.follower_id} 
@@ -153,16 +165,19 @@ export function FollowersDialog({
                   <div key={following.id} className="flex items-center justify-between">
                     <Link to={`/profile/${following.following_id}`} className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={following.following_profile?.avatar_url || undefined} />
+                        <AvatarImage 
+                          src={following.following_profile?.avatar_url || undefined} 
+                          alt={following.following_profile?.username || ''}
+                        />
                         <AvatarFallback>
-                          {following.following_profile?.username.slice(0, 2).toUpperCase()}
+                          {following.following_profile?.username?.slice(0, 2).toUpperCase() || '??'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{following.following_profile?.username}</p>
+                        <p className="font-medium">{following.following_profile?.username || 'Usuário'}</p>
                       </div>
                     </Link>
-                    {user && (
+                    {user && following.following_id !== user.id && (
                       <FollowButton 
                         userId={user.id} 
                         targetUserId={following.following_id} 
