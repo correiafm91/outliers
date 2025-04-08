@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Article, Profile } from "@/types/profile";
 import { toast } from "sonner";
+import { FollowButton } from "@/components/profile/FollowButton";
+import { FollowersDialog } from "@/components/profile/FollowersDialog";
 import { 
   Loader2, 
   Calendar, 
@@ -20,10 +22,12 @@ import {
   Linkedin, 
   Youtube, 
   Facebook,
+  Twitter,
   CheckCircle,
   Trash,
   Upload,
-  Image
+  Image,
+  Edit
 } from "lucide-react";
 import {
   Dialog,
@@ -63,6 +67,8 @@ export default function ProfilePage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [bannerProgress, setBannerProgress] = useState(0);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   
   // Estado para edição
   const [editForm, setEditForm] = useState({
@@ -73,6 +79,7 @@ export default function ProfilePage() {
     linkedin_url: '',
     youtube_url: '',
     facebook_url: '',
+    twitter_url: '',
     banner_url: ''
   });
 
@@ -95,6 +102,7 @@ export default function ProfilePage() {
           linkedin_url: profile.linkedin_url || '',
           youtube_url: profile.youtube_url || '',
           facebook_url: profile.facebook_url || '',
+          twitter_url: profile.twitter_url || '',
           banner_url: profile.banner_url || ''
         });
       }
@@ -113,7 +121,6 @@ export default function ProfilePage() {
         .single();
       
       if (profileError) throw profileError;
-      setProfile(profileData);
       
       // Buscar artigos do usuário, ordenados por data mais recente
       const { data: articlesData, error: articlesError } = await supabase
@@ -124,6 +131,30 @@ export default function ProfilePage() {
         
       if (articlesError) throw articlesError;
       
+      // Buscar contagem de seguidores
+      const { count: followersCount, error: followersError } = await supabase
+        .from("followers")
+        .select("id", { count: 'exact', head: true })
+        .eq("following_id", id);
+        
+      if (followersError) throw followersError;
+      
+      // Buscar contagem de seguindo
+      const { count: followingCount, error: followingError } = await supabase
+        .from("followers")
+        .select("id", { count: 'exact', head: true })
+        .eq("follower_id", id);
+        
+      if (followingError) throw followingError;
+      
+      setProfile({
+        ...profileData,
+        followers_count: followersCount || 0,
+        following_count: followingCount || 0
+      });
+      
+      setFollowersCount(followersCount || 0);
+      setFollowingCount(followingCount || 0);
       setUserArticles(articlesData as Article[]);
       
       // Verificar se o usuário atual é o proprietário do perfil
@@ -277,6 +308,7 @@ export default function ProfilePage() {
           linkedin_url: editForm.linkedin_url,
           youtube_url: editForm.youtube_url,
           facebook_url: editForm.facebook_url,
+          twitter_url: editForm.twitter_url,
           banner_url: editForm.banner_url
         })
         .eq("id", profile?.id);
@@ -352,6 +384,12 @@ export default function ProfilePage() {
                 src={profile.banner_url} 
                 alt="Banner do perfil" 
                 className="w-full h-full object-cover"
+                onError={() => {
+                  // If image fails to load, clear the banner URL to show the gradient
+                  if (profile) {
+                    setProfile({...profile, banner_url: null});
+                  }
+                }}
               />
             )}
             {isOwner && (
@@ -385,7 +423,7 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
               
-              {isOwner && (
+              {isOwner ? (
                 <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="mt-4">
@@ -512,6 +550,17 @@ export default function ProfilePage() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+              ) : (
+                <div className="mt-4">
+                  {user && (
+                    <FollowButton 
+                      userId={user.id} 
+                      targetUserId={profile.id} 
+                      variant="default"
+                      size="sm"
+                    />
+                  )}
+                </div>
               )}
             </div>
             
@@ -534,9 +583,18 @@ export default function ProfilePage() {
                 <span className="text-sm">Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
               </div>
               
+              {/* Followers/Following Counter */}
+              <div className="mt-3">
+                <FollowersDialog 
+                  userId={profile.id}
+                  followers={followersCount}
+                  following={followingCount}
+                />
+              </div>
+              
               {/* Bio */}
               {profile.bio && (
-                <div className="mt-6">
+                <div className="mt-4">
                   <p className="text-muted-foreground whitespace-pre-line">{profile.bio}</p>
                 </div>
               )}
@@ -551,6 +609,17 @@ export default function ProfilePage() {
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <Instagram className="h-5 w-5" />
+                  </a>
+                )}
+                
+                {profile.twitter_url && (
+                  <a 
+                    href={profile.twitter_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Twitter className="h-5 w-5" />
                   </a>
                 )}
                 
@@ -603,31 +672,41 @@ export default function ProfilePage() {
                   {userArticles.map((article) => (
                     <div key={article.id} className="relative">
                       {isOwner && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
-                              size="icon"
-                              className="absolute top-2 right-2 z-10"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir artigo</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteArticle(article.id)}>
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="absolute top-2 right-2 z-10 flex gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="icon"
+                            asChild
+                          >
+                            <Link to={`/edit-article/${article.id}`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive" 
+                                size="icon"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir artigo</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteArticle(article.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       )}
                       <BlogCard post={{
                         id: article.id,
@@ -641,8 +720,10 @@ export default function ProfilePage() {
                         published_at: article.created_at,
                         category: article.sector || "Geral",
                         image: article.image_url || "",
+                        video: article.video_url || "",
                         likes: 0,
-                        comments: 0
+                        comments: 0,
+                        aspect_ratio: article.aspect_ratio
                       }} />
                     </div>
                   ))}
@@ -674,7 +755,7 @@ export default function ProfilePage() {
                   <div>
                     <h4 className="font-medium mb-2">Redes Sociais</h4>
                     <div className="flex flex-col gap-2">
-                      {(profile.instagram_url || profile.linkedin_url || profile.youtube_url || profile.facebook_url) ? (
+                      {(profile.instagram_url || profile.linkedin_url || profile.youtube_url || profile.facebook_url || profile.twitter_url) ? (
                         <>
                           {profile.instagram_url && (
                             <a 
@@ -684,6 +765,17 @@ export default function ProfilePage() {
                               className="flex items-center text-muted-foreground hover:text-foreground"
                             >
                               <Instagram className="h-4 w-4 mr-2" /> Instagram
+                            </a>
+                          )}
+                          
+                          {profile.twitter_url && (
+                            <a 
+                              href={profile.twitter_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center text-muted-foreground hover:text-foreground"
+                            >
+                              <Twitter className="h-4 w-4 mr-2" /> Twitter
                             </a>
                           )}
                           

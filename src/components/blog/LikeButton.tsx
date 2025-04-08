@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 interface LikeButtonProps {
   articleId: string;
   authorId: string;
+  initialLikeCount?: number;
+  initialLikedState?: boolean;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   showCount?: boolean;
@@ -17,12 +19,14 @@ interface LikeButtonProps {
 export function LikeButton({ 
   articleId, 
   authorId,
+  initialLikeCount = 0,
+  initialLikedState = false,
   variant = 'ghost', 
   size = 'default',
   showCount = true
 }: LikeButtonProps) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(initialLikedState);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 

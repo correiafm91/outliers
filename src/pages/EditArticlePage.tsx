@@ -11,21 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Image, Loader2 } from "lucide-react";
+import { Image, Loader2, Video } from "lucide-react";
+import { Article } from "@/types/profile";
 
 type SectorType = "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment" | "other";
 type AspectRatioType = "16:9" | "4:3" | "1:1" | "3:2";
-
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  image_url: string | null;
-  created_at: string;
-  sector: SectorType;
-  author_id: string;
-  aspect_ratio?: string;
-}
 
 export default function EditArticlePage() {
   const { id } = useParams<{ id: string }>();
@@ -37,9 +27,12 @@ export default function EditArticlePage() {
   const [sector, setSector] = useState<SectorType>("other");
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("16:9");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [mediaType, setMediaType] = useState<"image" | "video" | "none">("none");
 
   useEffect(() => {
     if (!user) {
@@ -75,7 +68,13 @@ export default function EditArticlePage() {
       setAspectRatio((data.aspect_ratio as AspectRatioType) || "16:9");
       
       if (data.image_url) {
-        setPreview(data.image_url);
+        setImagePreview(data.image_url);
+        setMediaType("image");
+      }
+      
+      if (data.video_url) {
+        setVideoPreview(data.video_url);
+        setMediaType("video");
       }
       
       setIsLoading(false);
@@ -89,7 +88,21 @@ export default function EditArticlePage() {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       setImageFile(file);
-      setPreview(URL.createObjectURL(file));
+      setImagePreview(URL.createObjectURL(file));
+      setMediaType("image");
+      setVideoFile(null);
+      setVideoPreview(null);
+    }
+  };
+
+  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setVideoFile(file);
+      setVideoPreview(URL.createObjectURL(file));
+      setMediaType("video");
+      setImageFile(null);
+      setImagePreview(null);
     }
   };
 
@@ -109,7 +122,9 @@ export default function EditArticlePage() {
 
     try {
       // Upload image if selected
-      let imageUrl = article.image_url;
+      let imageUrl = mediaType === "image" ? article.image_url : null;
+      let videoUrl = mediaType === "video" ? article.video_url : null;
+      
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
@@ -127,6 +142,24 @@ export default function EditArticlePage() {
 
         imageUrl = urlData.publicUrl;
       }
+      
+      if (videoFile) {
+        const fileExt = videoFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `videos/${user.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('videos')
+          .upload(filePath, videoFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('videos')
+          .getPublicUrl(filePath);
+
+        videoUrl = urlData.publicUrl;
+      }
 
       // Update article
       const { error } = await supabase
@@ -136,7 +169,8 @@ export default function EditArticlePage() {
           content,
           sector,
           image_url: imageUrl,
-          aspect_ratio: aspectRatio,
+          video_url: videoUrl,
+          aspect_ratio: mediaType === "image" ? aspectRatio : null,
           updated_at: new Date().toISOString()
         })
         .eq("id", article.id);
@@ -209,55 +243,126 @@ export default function EditArticlePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="image">Imagem de Capa</Label>
-                <div className="flex items-center gap-4">
+                <Label className="block mb-2">Mídia (escolha imagem ou vídeo)</Label>
+                <div className="flex flex-wrap gap-4 mb-4">
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("image")?.click()}
+                    variant={mediaType === "image" ? "default" : "outline"}
+                    onClick={() => setMediaType("image")}
                     className="flex items-center gap-2"
                   >
                     <Image className="h-4 w-4" />
-                    {preview ? "Trocar imagem" : "Escolher imagem"}
+                    Imagem
                   </Button>
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                  {preview && <span className="text-sm text-muted-foreground">Imagem selecionada</span>}
+                  <Button
+                    type="button"
+                    variant={mediaType === "video" ? "default" : "outline"}
+                    onClick={() => setMediaType("video")}
+                    className="flex items-center gap-2"
+                  >
+                    <Video className="h-4 w-4" />
+                    Vídeo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={mediaType === "none" ? "default" : "outline"}
+                    onClick={() => {
+                      setMediaType("none");
+                      setImageFile(null);
+                      setVideoFile(null);
+                      setImagePreview(null);
+                      setVideoPreview(null);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    Nenhuma mídia
+                  </Button>
                 </div>
-                
-                {/* Aspect ratio selector */}
-                {preview && (
-                  <div className="mt-4 space-y-2">
-                    <Label htmlFor="aspectRatio">Proporção da imagem</Label>
-                    <Select
-                      value={aspectRatio}
-                      onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolha a proporção" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
-                        <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
-                        <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
-                        <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                {mediaType === "image" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("image")?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Image className="h-4 w-4" />
+                        {imagePreview ? "Trocar imagem" : "Escolher imagem"}
+                      </Button>
+                      <Input
+                        id="image"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                      {imagePreview && <span className="text-sm text-muted-foreground">Imagem selecionada</span>}
+                    </div>
+                    
+                    {/* Aspect ratio selector */}
+                    {imagePreview && (
+                      <div className="mt-4 space-y-2">
+                        <Label htmlFor="aspectRatio">Proporção da imagem</Label>
+                        <Select
+                          value={aspectRatio}
+                          onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolha a proporção" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
+                            <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
+                            <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
+                            <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {preview && (
-                  <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="h-full w-full object-cover"
-                    />
+                {mediaType === "video" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("video")?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Video className="h-4 w-4" />
+                        {videoPreview ? "Trocar vídeo" : "Escolher vídeo"}
+                      </Button>
+                      <Input
+                        id="video"
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={handleVideoChange}
+                      />
+                      {videoPreview && <span className="text-sm text-muted-foreground">Vídeo selecionado</span>}
+                    </div>
+                    
+                    {videoPreview && (
+                      <div className="mt-4 overflow-hidden rounded-md border border-border">
+                        <video
+                          src={videoPreview}
+                          controls
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

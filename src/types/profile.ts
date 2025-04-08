@@ -13,6 +13,8 @@ export interface Profile {
   twitter_url: string | null;
   is_verified?: boolean;
   banner_url?: string | null;
+  followers_count?: number;
+  following_count?: number;
 }
 
 export interface Article {
@@ -21,6 +23,7 @@ export interface Article {
   content: string;
   excerpt: string | null;
   image_url: string | null;
+  video_url: string | null;
   sector: string | null;
   created_at: string;
   updated_at: string | null;
@@ -35,4 +38,13 @@ export interface SavedArticle {
   article_id: string;
   created_at: string;
   article: Article;
+}
+
+export interface Follower {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+  follower_profile?: Profile;
+  following_profile?: Profile;
 }

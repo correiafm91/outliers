@@ -78,10 +78,7 @@ export default function Index() {
         <section className="py-16 md:py-24 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-16 animate-once animate-fade-in">
-              <h1 className="heading-xl max-w-3xl mb-6">Insights de Negócios para Quem Pensa Diferente</h1>
-              <p className="text-lg text-muted-foreground max-w-xl mb-8">
-                Análises e perspectivas de ponta sobre negócios, tecnologia e finanças para profissionais com visão de futuro.
-              </p>
+              <h1 className="heading-xl max-w-3xl mb-6">Plataforma de Blog e Compartilhamento</h1>
               <Button size="lg" asChild>
                 <Link to="/blogs">
                   Explorar Artigos
@@ -113,8 +110,10 @@ export default function Index() {
                         published_at: article.created_at,
                         category: article.sector || "Geral",
                         image: article.image_url || "",
+                        video: article.video_url || "",
                         likes: 0,
-                        comments: 0
+                        comments: 0,
+                        aspect_ratio: article.aspect_ratio
                       }} featured={true} />
                     </div>
                   );
@@ -159,8 +158,10 @@ export default function Index() {
                         published_at: article.created_at,
                         category: article.sector || "Geral",
                         image: article.image_url || "",
+                        video: article.video_url || "",
                         likes: 0,
-                        comments: 0
+                        comments: 0,
+                        aspect_ratio: article.aspect_ratio
                       }} />
                     </div>
                   );
