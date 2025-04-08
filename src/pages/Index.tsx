@@ -110,7 +110,6 @@ export default function Index() {
                         published_at: article.created_at,
                         category: article.sector || "Geral",
                         image: article.image_url || "",
-                        video: article.video_url || "",
                         likes: 0,
                         comments: 0,
                         aspect_ratio: article.aspect_ratio
@@ -158,7 +157,6 @@ export default function Index() {
                         published_at: article.created_at,
                         category: article.sector || "Geral",
                         image: article.image_url || "",
-                        video: article.video_url || "",
                         likes: 0,
                         comments: 0,
                         aspect_ratio: article.aspect_ratio

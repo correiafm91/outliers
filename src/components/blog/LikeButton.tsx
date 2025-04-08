@@ -23,7 +23,7 @@ export function LikeButton({
   initialLikedState = false,
   variant = 'ghost', 
   size = 'default',
-  showCount = true
+  showCount = false
 }: LikeButtonProps) {
   const [isLiked, setIsLiked] = useState(initialLikedState);
   const [likeCount, setLikeCount] = useState(initialLikeCount);

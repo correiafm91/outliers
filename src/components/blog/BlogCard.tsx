@@ -1,11 +1,8 @@
 
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageSquare, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
 
 export interface BlogPost {
   id: string;
@@ -31,20 +28,6 @@ interface BlogCardProps {
 }
 
 export function BlogCard({ post, className = "", featured = false }: BlogCardProps) {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes);
-
-  const toggleLike = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (liked) {
-      setLikeCount(likeCount - 1);
-    } else {
-      setLikeCount(likeCount + 1);
-    }
-    setLiked(!liked);
-  };
-
   const formattedDate = formatDistanceToNow(new Date(post.published_at), { addSuffix: true });
   
   // Handle aspect ratio
@@ -73,27 +56,13 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
             
             <p className="text-muted-foreground line-clamp-2">{post.excerpt}</p>
             
-            <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center pt-4">
               <div className="flex items-center space-x-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={post.author.avatar} alt={post.author.name} />
                   <AvatarFallback>{post.author.name.slice(0, 2)}</AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium">{post.author.name}</span>
-              </div>
-              
-              <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" onClick={toggleLike} className={`${liked ? 'text-destructive' : ''}`}>
-                  <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                </Button>
-                <span className="text-sm">{likeCount}</span>
-                
-                <Link to={`/blog/${post.id}#comments`}>
-                  <Button variant="ghost" size="icon">
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <span className="text-sm">{post.comments}</span>
               </div>
             </div>
           </div>
@@ -126,27 +95,13 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
             <p className="text-muted-foreground text-sm line-clamp-2">{post.excerpt}</p>
           </div>
           
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center mt-4">
             <div className="flex items-center space-x-2">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={post.author.avatar} alt={post.author.name} />
                 <AvatarFallback>{post.author.name.slice(0, 2)}</AvatarFallback>
               </Avatar>
               <span className="text-xs sm:text-sm font-medium">{post.author.name}</span>
-            </div>
-            
-            <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="icon" onClick={toggleLike} className={`${liked ? 'text-destructive' : ''}`}>
-                <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-              </Button>
-              <span className="text-xs sm:text-sm">{likeCount}</span>
-              
-              <Link to={`/blog/${post.id}#comments`}>
-                <Button variant="ghost" size="icon">
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
-              </Link>
-              <span className="text-xs sm:text-sm">{post.comments}</span>
             </div>
           </div>
         </div>

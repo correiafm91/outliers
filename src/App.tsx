@@ -1,7 +1,7 @@
 
 import { Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 import Index from "@/pages/Index";
