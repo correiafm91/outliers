@@ -74,14 +74,73 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
   const [likeCount, setLikeCount] = useState(comment.likes || 0);
   const { user } = useAuth();
   
-  const handleLike = () => {
+  // Check if comment is liked by current user
+  useEffect(() => {
+    if (user && comment.id) {
+      checkIfLiked();
+    }
+  }, [user, comment.id]);
+  
+  const checkIfLiked = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("comment_likes")
+        .select("*")
+        .eq("comment_id", comment.id)
+        .eq("user_id", user?.id)
+        .maybeSingle();
+        
+      if (error) throw error;
+      setIsLiked(!!data);
+    } catch (error) {
+      console.error("Error checking if comment is liked:", error);
+    }
+  };
+  
+  const handleLike = async () => {
     if (!user) {
       toast.error("Você precisa estar logado para curtir comentários");
       return;
     }
     
-    setIsLiked(!isLiked);
-    setLikeCount(prevCount => isLiked ? prevCount - 1 : prevCount + 1);
+    try {
+      if (isLiked) {
+        // Remove like
+        await supabase
+          .from("comment_likes")
+          .delete()
+          .eq("comment_id", comment.id)
+          .eq("user_id", user.id);
+          
+        // Update comment likes count
+        await supabase
+          .from("comments")
+          .update({ likes: Math.max(0, likeCount - 1) })
+          .eq("id", comment.id);
+          
+        setIsLiked(false);
+        setLikeCount(prev => Math.max(0, prev - 1));
+      } else {
+        // Add like
+        await supabase
+          .from("comment_likes")
+          .insert({
+            comment_id: comment.id,
+            user_id: user.id
+          });
+          
+        // Update comment likes count
+        await supabase
+          .from("comments")
+          .update({ likes: likeCount + 1 })
+          .eq("id", comment.id);
+          
+        setIsLiked(true);
+        setLikeCount(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error toggling comment like:", error);
+    }
   };
   
   const handleDelete = async () => {
@@ -156,7 +215,7 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
           
           <div className="mt-4 flex items-center">
             <Button variant="ghost" size="sm" onClick={handleLike} className={isLiked ? "text-primary" : ""}>
-              <ThumbsUp className="mr-1 h-4 w-4" />
+              <ThumbsUp className={`mr-1 h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
               <span>{likeCount}</span>
             </Button>
           </div>

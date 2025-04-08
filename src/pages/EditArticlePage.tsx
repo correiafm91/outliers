@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Image, Loader2, Video } from "lucide-react";
 
-type SectorType = "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment" | "other";
 type AspectRatioType = "16:9" | "4:3" | "1:1" | "3:2";
 
 export default function EditArticlePage() {
@@ -67,9 +65,7 @@ export default function EditArticlePage() {
         setImagePreview(data.image_url);
         setMediaType("image");
         setAspectRatio((data.aspect_ratio as AspectRatioType) || "16:9");
-      }
-      
-      if (data.video_url) {
+      } else if (data.video_url) {
         setVideoPreview(data.video_url);
         setMediaType("video");
       }
@@ -119,8 +115,8 @@ export default function EditArticlePage() {
 
     try {
       // Upload image if selected
-      let imageUrl = mediaType === "image" ? article.image_url : null;
-      let videoUrl = mediaType === "video" ? article.video_url : null;
+      let imageUrl = mediaType === "image" && !imageFile ? article.image_url : null;
+      let videoUrl = mediaType === "video" && !videoFile ? article.video_url : null;
       
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
@@ -273,34 +269,31 @@ export default function EditArticlePage() {
                       {imagePreview && <span className="text-sm text-muted-foreground">Imagem selecionada</span>}
                     </div>
                     
-                    {/* Aspect ratio selector */}
-                    {imagePreview && (
-                      <div className="mt-4 space-y-2">
-                        <Label htmlFor="aspectRatio">Proporção da imagem</Label>
-                        <Select
-                          value={aspectRatio}
-                          onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Escolha a proporção" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
-                            <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
-                            <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
-                            <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
+                    <div className="mt-4 space-y-2">
+                      <Label htmlFor="aspectRatio">Proporção da imagem</Label>
+                      <Select
+                        value={aspectRatio}
+                        onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Escolha a proporção" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
+                          <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
+                          <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
+                          <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="h-full w-full object-cover"
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
                 

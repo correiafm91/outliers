@@ -16,8 +16,8 @@ interface Follower {
   follower_id: string;
   following_id: string;
   created_at: string;
-  follower_profile?: Profile;
-  following_profile?: Profile;
+  follower_profile?: Profile | null;
+  following_profile?: Profile | null;
 }
 
 interface FollowersDialogProps {
@@ -45,37 +45,57 @@ export function FollowersDialog({
     
     setLoading(true);
     try {
-      // Fetch followers with nested profiles
+      // Get all followers
       const { data: followersData, error: followersError } = await supabase
         .from('followers')
-        .select(`
-          id,
-          follower_id,
-          following_id,
-          created_at,
-          follower_profile:profiles!follower_id(id, username, avatar_url)
-        `)
+        .select('id, follower_id, following_id, created_at')
         .eq('following_id', userId)
         .order('created_at', { ascending: false });
         
       if (followersError) throw followersError;
-      setFollowersList(followersData || []);
       
-      // Fetch following with nested profiles
+      // For each follower, get their profile
+      const followersWithProfiles: Follower[] = [];
+      for (const follower of followersData || []) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .eq('id', follower.follower_id)
+          .single();
+          
+        followersWithProfiles.push({
+          ...follower,
+          follower_profile: profileData || null
+        });
+      }
+      
+      setFollowersList(followersWithProfiles);
+      
+      // Get all following
       const { data: followingData, error: followingError } = await supabase
         .from('followers')
-        .select(`
-          id,
-          follower_id,
-          following_id,
-          created_at,
-          following_profile:profiles!following_id(id, username, avatar_url)
-        `)
+        .select('id, follower_id, following_id, created_at')
         .eq('follower_id', userId)
         .order('created_at', { ascending: false });
         
       if (followingError) throw followingError;
-      setFollowingList(followingData || []);
+      
+      // For each following, get their profile
+      const followingWithProfiles: Follower[] = [];
+      for (const following of followingData || []) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .eq('id', following.following_id)
+          .single();
+          
+        followingWithProfiles.push({
+          ...following,
+          following_profile: profileData || null
+        });
+      }
+      
+      setFollowingList(followingWithProfiles);
       
     } catch (error) {
       console.error("Error fetching follows:", error);

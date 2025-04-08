@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,17 +66,6 @@ export default function NewArticlePage() {
     setIsSubmitting(true);
 
     try {
-      // Get user profile to get sector
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("sector")
-        .eq("id", user.id)
-        .single();
-        
-      if (profileError) throw profileError;
-        
-      const userSector = profileData?.sector || "other";
-
       // Upload image if selected
       let imageUrl = null;
       let videoUrl = null;
@@ -124,10 +112,10 @@ export default function NewArticlePage() {
         .insert({
           title,
           content,
-          sector: userSector,
           author_id: user.id,
           image_url: imageUrl,
           video_url: videoUrl,
+          sector: "other",
           aspect_ratio: mediaType === "image" ? aspectRatio : null
         })
         .select()
@@ -223,34 +211,31 @@ export default function NewArticlePage() {
                       {imagePreview && <span className="text-sm text-muted-foreground">Imagem selecionada</span>}
                     </div>
                     
-                    {/* Aspect ratio selector */}
-                    {imagePreview && (
-                      <div className="mt-4 space-y-2">
-                        <Label htmlFor="aspectRatio">Proporção da imagem</Label>
-                        <Select
-                          value={aspectRatio}
-                          onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Escolha a proporção" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
-                            <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
-                            <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
-                            <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
+                    <div className="mt-4 space-y-2">
+                      <Label htmlFor="aspectRatio">Proporção da imagem</Label>
+                      <Select
+                        value={aspectRatio}
+                        onValueChange={(value) => setAspectRatio(value as AspectRatioType)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Escolha a proporção" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
+                          <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
+                          <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
+                          <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="h-full w-full object-cover"
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
                 

@@ -19,7 +19,7 @@ const badgeVariants = cva(
         notification:
           "border-transparent bg-white/20 backdrop-blur-sm text-white", 
         verified:
-          "border-transparent bg-blue-500/20 backdrop-blur-sm text-blue-500", // New verified badge variant
+          "border-transparent bg-blue-500/20 backdrop-blur-sm text-blue-500", // Blue transparent verified badge
       },
     },
     defaultVariants: {
