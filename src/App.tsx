@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
@@ -18,23 +18,21 @@ import SearchPage from "@/pages/SearchPage";
 export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<IndexPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/blog" element={<BlogsPage />} />
-            <Route path="/blog/:id" element={<BlogDetailPage />} />
-            <Route path="/profile/:id" element={<ProfilePage />} />
-            <Route path="/new-article" element={<NewArticlePage />} />
-            <Route path="/edit-article/:id" element={<EditArticlePage />} />
-            <Route path="/saved-articles" element={<SavedArticlesPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </AuthProvider>
-      </Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<IndexPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/blog" element={<BlogsPage />} />
+          <Route path="/blog/:id" element={<BlogDetailPage />} />
+          <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/new-article" element={<NewArticlePage />} />
+          <Route path="/edit-article/:id" element={<EditArticlePage />} />
+          <Route path="/saved-articles" element={<SavedArticlesPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

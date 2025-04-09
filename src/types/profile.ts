@@ -48,3 +48,22 @@ export interface Follower {
   follower_profile?: Profile;
   following_profile?: Profile;
 }
+
+// Add BlogPost interface to match what BlogCard component expects
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  author: {
+    name: string;
+    avatar: string;
+  };
+  published_at: string;
+  category: string;
+  image: string;
+  video_url?: string;
+  likes: number;
+  comments: number;
+  aspect_ratio?: string;
+}
