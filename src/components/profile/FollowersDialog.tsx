@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/profile";
@@ -59,14 +59,16 @@ export function FollowersDialog({
       for (const follower of followersData || []) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('id, username, avatar_url')
+          .select('*')
           .eq('id', follower.follower_id)
           .single();
           
-        followersWithProfiles.push({
-          ...follower,
-          follower_profile: profileData || null
-        });
+        if (profileData) {
+          followersWithProfiles.push({
+            ...follower,
+            follower_profile: profileData as Profile
+          });
+        }
       }
       
       setFollowersList(followersWithProfiles);
@@ -85,14 +87,16 @@ export function FollowersDialog({
       for (const following of followingData || []) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('id, username, avatar_url')
+          .select('*')
           .eq('id', following.following_id)
           .single();
           
-        followingWithProfiles.push({
-          ...following,
-          following_profile: profileData || null
-        });
+        if (profileData) {
+          followingWithProfiles.push({
+            ...following,
+            following_profile: profileData as Profile
+          });
+        }
       }
       
       setFollowingList(followingWithProfiles);

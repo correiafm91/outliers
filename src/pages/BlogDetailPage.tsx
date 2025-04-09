@@ -92,7 +92,7 @@ export default function BlogDetailPage() {
         },
         content: item.content,
         created_at: item.created_at,
-        likes: 0, // Contagem padrão de curtidas
+        likes: item.likes || 0, // Use likes count from database
       }));
 
       setComments(formattedComments);
@@ -116,7 +116,7 @@ export default function BlogDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Carregando artigo...</span>
+            <span>Carregando publicação...</span>
           </div>
         </main>
         <Footer />
@@ -129,7 +129,7 @@ export default function BlogDetailPage() {
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div>Artigo não encontrado</div>
+          <div>Publicação não encontrada</div>
         </main>
         <Footer />
       </div>
@@ -173,13 +173,24 @@ export default function BlogDetailPage() {
             </div>
           </header>
           
-          {/* Banner Image */}
+          {/* Media Content - Image or Video */}
           {article.image_url && (
             <div className="mb-10 animate-fade-in">
               <img 
                 src={article.image_url} 
                 alt={article.title} 
-                className="w-full h-auto rounded-lg object-cover aspect-video"
+                className="w-full h-auto rounded-lg object-cover"
+                style={article.aspect_ratio ? { aspectRatio: article.aspect_ratio.replace(':', '/') } : { aspectRatio: '16/9' }}
+              />
+            </div>
+          )}
+          
+          {article.video_url && (
+            <div className="mb-10 animate-fade-in">
+              <video 
+                src={article.video_url} 
+                controls
+                className="w-full h-auto rounded-lg"
               />
             </div>
           )}
@@ -227,7 +238,11 @@ export default function BlogDetailPage() {
             )}
             
             <div className="mt-12">
-              <CommentList comments={comments} onCommentDelete={handleCommentDeleted} />
+              <CommentList 
+                comments={comments} 
+                onCommentDelete={handleCommentDeleted} 
+                articleId={article.id}
+              />
             </div>
           </section>
         </article>

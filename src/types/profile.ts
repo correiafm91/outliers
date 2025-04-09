@@ -29,7 +29,7 @@ export interface Article {
   updated_at: string | null;
   published: boolean;
   author_id: string;
-  aspect_ratio?: string; // New field to handle image aspect ratio
+  aspect_ratio?: string; // Field to handle image aspect ratio
 }
 
 export interface SavedArticle {

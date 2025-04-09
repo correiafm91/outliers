@@ -83,11 +83,14 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
   
   const checkIfLiked = async () => {
     try {
+      if (!user) return;
+      
+      // Since the table was just created, we need to explicitly name it with from()
       const { data, error } = await supabase
-        .from("comment_likes")
-        .select("*")
-        .eq("comment_id", comment.id)
-        .eq("user_id", user?.id)
+        .from('comment_likes')
+        .select('*')
+        .eq('comment_id', comment.id)
+        .eq('user_id', user.id)
         .maybeSingle();
         
       if (error) throw error;
@@ -107,23 +110,23 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
       if (isLiked) {
         // Remove like
         await supabase
-          .from("comment_likes")
+          .from('comment_likes')
           .delete()
-          .eq("comment_id", comment.id)
-          .eq("user_id", user.id);
+          .eq('comment_id', comment.id)
+          .eq('user_id', user.id);
           
         // Update comment likes count
         await supabase
-          .from("comments")
+          .from('comments')
           .update({ likes: Math.max(0, likeCount - 1) })
-          .eq("id", comment.id);
+          .eq('id', comment.id);
           
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
       } else {
         // Add like
         await supabase
-          .from("comment_likes")
+          .from('comment_likes')
           .insert({
             comment_id: comment.id,
             user_id: user.id
@@ -131,9 +134,9 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
           
         // Update comment likes count
         await supabase
-          .from("comments")
+          .from('comments')
           .update({ likes: likeCount + 1 })
-          .eq("id", comment.id);
+          .eq('id', comment.id);
           
         setIsLiked(true);
         setLikeCount(prev => prev + 1);

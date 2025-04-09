@@ -42,7 +42,8 @@ export function CommentForm({ articleId, authorId, onCommentAdded }: CommentForm
         .insert({
           article_id: articleId,
           author_id: user.id,
-          content: content.trim()
+          content: content.trim(),
+          likes: 0 // Initialize with zero likes
         });
 
       if (error) throw error;
