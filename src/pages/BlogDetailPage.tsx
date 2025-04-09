@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -18,6 +17,8 @@ import { Article, Profile } from "@/types/profile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@radix-ui/react-alert-dialog";
+import { Trash } from "lucide-react";
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,6 @@ export default function BlogDetailPage() {
 
       setArticle(article as Article);
 
-      // Buscar o autor
       const { data: author, error: authorError } = await supabase
         .from("profiles")
         .select("*")
@@ -82,7 +82,6 @@ export default function BlogDetailPage() {
 
       if (error) throw error;
       
-      // Transformar os dados para corresponder à interface Comment
       const formattedComments = data.map((item: any) => ({
         id: item.id,
         author: {
@@ -92,7 +91,7 @@ export default function BlogDetailPage() {
         },
         content: item.content,
         created_at: item.created_at,
-        likes: item.likes || 0, // Use likes count from database
+        likes: item.likes || 0,
       }));
 
       setComments(formattedComments);
@@ -104,9 +103,71 @@ export default function BlogDetailPage() {
   const handleCommentAdded = () => {
     fetchComments();
   };
-  
+
   const handleCommentDeleted = (commentId: string) => {
     setComments(comments.filter(comment => comment.id !== commentId));
+  };
+
+  const handleDeleteArticle = async () => {
+    try {
+      if (!article || !user) return;
+      
+      if (user.id !== article.author_id) {
+        toast.error("Você não tem permissão para excluir esta publicação");
+        return;
+      }
+      
+      setLoading(true);
+      
+      await supabase
+        .from("likes")
+        .delete()
+        .eq("article_id", article.id);
+        
+      await supabase
+        .from("saved_articles")
+        .delete()
+        .eq("article_id", article.id);
+        
+      const { data: articleComments } = await supabase
+        .from("comments")
+        .select("id")
+        .eq("article_id", article.id);
+        
+      if (articleComments && articleComments.length > 0) {
+        const commentIds = articleComments.map(comment => comment.id);
+        
+        await supabase
+          .from("comment_likes")
+          .delete()
+          .in("comment_id", commentIds);
+      }
+      
+      await supabase
+        .from("comments")
+        .delete()
+        .eq("article_id", article.id);
+        
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("article_id", article.id);
+      
+      const { error } = await supabase
+        .from("articles")
+        .delete()
+        .eq("id", article.id);
+        
+      if (error) throw error;
+      
+      toast.success("Publicação excluída com sucesso");
+      navigate("/profile/" + user.id);
+    } catch (error: any) {
+      console.error("Erro ao excluir publicação:", error.message);
+      toast.error(error.message || "Erro ao excluir publicação");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -144,7 +205,6 @@ export default function BlogDetailPage() {
       
       <main className="flex-1">
         <article className="container mx-auto px-4 py-8 max-w-4xl">
-          {/* Header */}
           <header className="mb-8 animate-fade-in">
             <Badge variant="secondary" className="mb-4">{article.sector}</Badge>
             <h1 className="text-4xl font-bold mb-6">{article.title}</h1>
@@ -162,6 +222,28 @@ export default function BlogDetailPage() {
               </div>
               
               <div className="flex items-center space-x-2">
+                {user && user.id === article.author_id && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive">
+                        <Trash className="h-4 w-4" />
+                        <span className="sr-only">Excluir publicação</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir publicação</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteArticle}>Excluir</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
                 <LikeButton articleId={article.id} authorId={article.author_id} />
                 <SaveArticleButton articleId={article.id} />
                 <ShareButton 
@@ -173,7 +255,6 @@ export default function BlogDetailPage() {
             </div>
           </header>
           
-          {/* Media Content - Image or Video */}
           {article.image_url && (
             <div className="mb-10 animate-fade-in">
               <img 
@@ -195,17 +276,14 @@ export default function BlogDetailPage() {
             </div>
           )}
           
-          {/* Content */}
           <div className="prose prose-lg prose-invert max-w-none mb-12 whitespace-pre-line">
             {article.content}
           </div>
           
-          {/* Tags */}
           <div className="flex flex-wrap gap-2 mb-10">
             <Badge variant="outline">{article.sector}</Badge>
           </div>
           
-          {/* Social Share */}
           <div className="flex items-center justify-between border-t border-b border-border py-6 mb-10">
             <div className="flex items-center space-x-4">
               <span className="text-muted-foreground">Compartilhar:</span>
@@ -223,7 +301,6 @@ export default function BlogDetailPage() {
             </div>
           </div>
           
-          {/* Comments Section */}
           <section className="border-t border-border pt-10">
             <h2 className="text-2xl font-bold mb-6">Comentários</h2>
             {user ? (

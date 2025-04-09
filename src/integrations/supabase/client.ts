@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -283,3 +282,22 @@ const ensureStorageBuckets = async () => {
 
 // Call this function when the client is first imported
 ensureStorageBuckets();
+
+// Function to ensure unique constraints on likes table
+const ensureUniqueConstraints = async () => {
+  try {
+    // Check if likes table has unique constraint
+    const { error } = await supabase.rpc('check_likes_constraint');
+    
+    // If error, constraint might not exist, try to create it
+    if (error) {
+      console.log("Creating unique constraint for likes table...");
+      await supabase.rpc('create_likes_constraint');
+    }
+  } catch (e) {
+    console.error("Error ensuring unique constraints:", e);
+  }
+};
+
+// Call this function when the client is first imported
+ensureUniqueConstraints();

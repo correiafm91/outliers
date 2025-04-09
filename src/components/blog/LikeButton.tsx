@@ -110,34 +110,47 @@ export function LikeButton({
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
       } else {
-        // Add like
-        const { error } = await supabase
+        // Check if like already exists to prevent duplicate key error
+        const { data: existingLike } = await supabase
           .from("likes")
-          .insert({
-            user_id: user.id,
-            article_id: articleId
-          });
-
-        if (error) throw error;
-        
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
-
-        // Create notification for like (if not the author)
-        if (user.id !== authorId) {
-          try {
-            await supabase
-              .from("notifications")
-              .insert({
-                user_id: authorId,
-                actor_id: user.id,
-                type: 'like',
-                article_id: articleId,
-                read: false
-              });
-          } catch (notifError) {
-            console.error("Error creating notification:", notifError);
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("article_id", articleId)
+          .maybeSingle();
+          
+        if (!existingLike) {
+          // Add like only if it doesn't exist
+          const { error } = await supabase
+            .from("likes")
+            .insert({
+              user_id: user.id,
+              article_id: articleId
+            });
+  
+          if (error) throw error;
+          
+          setIsLiked(true);
+          setLikeCount(prev => prev + 1);
+  
+          // Create notification for like (if not the author)
+          if (user.id !== authorId) {
+            try {
+              await supabase
+                .from("notifications")
+                .insert({
+                  user_id: authorId,
+                  actor_id: user.id,
+                  type: 'like',
+                  article_id: articleId,
+                  read: false
+                });
+            } catch (notifError) {
+              console.error("Error creating notification:", notifError);
+            }
           }
+        } else {
+          // Like already exists, just update the UI
+          setIsLiked(true);
         }
       }
     } catch (error: any) {

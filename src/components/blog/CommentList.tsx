@@ -85,7 +85,6 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
     try {
       if (!user) return;
       
-      // Since the table was just created, we need to explicitly name it with from()
       const { data, error } = await supabase
         .from('comment_likes')
         .select('*')
@@ -124,30 +123,51 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
       } else {
-        // Add like
-        await supabase
+        // Check if like already exists to prevent duplicate
+        const { data: existingLike } = await supabase
           .from('comment_likes')
-          .insert({
-            comment_id: comment.id,
-            user_id: user.id
-          });
+          .select('id')
+          .eq('comment_id', comment.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
           
-        // Update comment likes count
-        await supabase
-          .from('comments')
-          .update({ likes: likeCount + 1 })
-          .eq('id', comment.id);
-          
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
+        if (!existingLike) {
+          // Add like
+          await supabase
+            .from('comment_likes')
+            .insert({
+              comment_id: comment.id,
+              user_id: user.id
+            });
+            
+          // Update comment likes count
+          await supabase
+            .from('comments')
+            .update({ likes: likeCount + 1 })
+            .eq('id', comment.id);
+            
+          setIsLiked(true);
+          setLikeCount(prev => prev + 1);
+        } else {
+          // Like already exists, just update UI
+          setIsLiked(true);
+        }
       }
     } catch (error) {
       console.error("Error toggling comment like:", error);
+      toast.error("Erro ao curtir comentário");
     }
   };
   
   const handleDelete = async () => {
     try {
+      // First, delete all comment likes to avoid foreign key constraint violations
+      await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('comment_id', comment.id);
+        
+      // Then delete the comment
       const { error } = await supabase
         .from('comments')
         .delete()
