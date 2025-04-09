@@ -11,34 +11,43 @@ export type Database = {
     Tables: {
       articles: {
         Row: {
+          aspect_ratio: string | null
           author_id: string
           content: string
           created_at: string
+          excerpt: string | null
           id: string
           image_url: string | null
           sector: Database["public"]["Enums"]["sector_type"]
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
+          aspect_ratio?: string | null
           author_id: string
           content: string
           created_at?: string
+          excerpt?: string | null
           id?: string
           image_url?: string | null
           sector: Database["public"]["Enums"]["sector_type"]
           title: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
+          aspect_ratio?: string | null
           author_id?: string
           content?: string
           created_at?: string
+          excerpt?: string | null
           id?: string
           image_url?: string | null
           sector?: Database["public"]["Enums"]["sector_type"]
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {

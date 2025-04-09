@@ -16,6 +16,7 @@ export interface BlogPost {
   published_at: string;
   category: string;
   image: string;
+  video_url?: string;
   likes: number;
   comments: number;
   aspect_ratio?: string; // New field to handle image aspect ratio
@@ -38,11 +39,19 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
       <div className={`outliers-card h-full overflow-hidden group ${className} animate-once animate-fade-in`}>
         <div className="flex flex-col h-full">
           <div className="relative overflow-hidden rounded-md" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-            <img 
-              src={post.image} 
-              alt={post.title} 
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            {post.video_url ? (
+              <video 
+                src={post.video_url}
+                controls
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <img 
+                src={post.image} 
+                alt={post.title} 
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            )}
           </div>
           <div className="flex-1 mt-4 space-y-4">
             <div className="flex items-center space-x-2">
@@ -75,11 +84,19 @@ export function BlogCard({ post, className = "", featured = false }: BlogCardPro
     <div className={`outliers-card group ${className} animate-once animate-fade-in`}>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="sm:w-1/3 overflow-hidden rounded-md" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-          <img 
-            src={post.image} 
-            alt={post.title} 
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          {post.video_url ? (
+            <video 
+              src={post.video_url}
+              controls
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <img 
+              src={post.image} 
+              alt={post.title} 
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          )}
         </div>
         <div className="sm:w-2/3 flex flex-col justify-between">
           <div className="space-y-3">
