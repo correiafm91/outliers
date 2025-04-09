@@ -308,7 +308,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_likes_constraint: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      create_likes_constraint: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       sector_type:

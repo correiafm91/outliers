@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CommentForm } from "@/components/blog/CommentForm";
@@ -17,7 +17,15 @@ import { Article, Profile } from "@/types/profile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@radix-ui/react-alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel
+} from "@/components/ui/alert-dialog";
 import { Trash } from "lucide-react";
 
 export default function BlogDetailPage() {
@@ -27,6 +35,7 @@ export default function BlogDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
@@ -231,16 +240,16 @@ export default function BlogDetailPage() {
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
-                      <AlertDialogHeader>
+                      <div className="flex flex-col space-y-2 text-center sm:text-left">
                         <AlertDialogTitle>Excluir publicação</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
+                      </div>
+                      <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteArticle}>Excluir</AlertDialogAction>
-                      </AlertDialogFooter>
+                      </div>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}

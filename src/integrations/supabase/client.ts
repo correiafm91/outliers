@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -242,11 +243,12 @@ const ensureStorageBuckets = async () => {
       } else {
         console.log("Created profiles storage bucket");
         
-        // Set public policy for the bucket
-        const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl('dummy.txt', 1);
-        if (policyError && !policyError.message.includes('Object not found')) {
-          console.error("Error setting bucket policy:", policyError.message);
-        }
+        // Set public policy for the bucket - remove this code that's causing TypeScript errors
+        // The old code that's causing problems:
+        // const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl('dummy.txt', 1);
+        // if (policyError && !policyError.message.includes('Object not found')) {
+        //   console.error("Error setting bucket policy:", policyError.message);
+        // }
       }
     }
     
