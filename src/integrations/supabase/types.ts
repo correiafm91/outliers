@@ -102,6 +102,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          likes: number | null
         }
         Insert: {
           article_id: string
@@ -109,6 +110,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          likes?: number | null
         }
         Update: {
           article_id?: string
@@ -116,6 +118,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          likes?: number | null
         }
         Relationships: [
           {
