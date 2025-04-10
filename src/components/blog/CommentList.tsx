@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ThumbsUp, Trash } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, VerifiedBadge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -196,19 +197,23 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
   return (
     <div className="p-4 bg-secondary/10 rounded-lg">
       <div className="flex items-start gap-4">
-        <Avatar>
-          <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-          <AvatarFallback>
-            {comment.author.name ? comment.author.name.slice(0, 2).toUpperCase() : "??"}
-          </AvatarFallback>
-        </Avatar>
+        <Link to={comment.author.id ? `/profile/${comment.author.id}` : "#"}>
+          <Avatar>
+            <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
+            <AvatarFallback>
+              {comment.author.name ? comment.author.name.slice(0, 2).toUpperCase() : "??"}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
         
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <h4 className="font-medium">{comment.author.name}</h4>
+            <div className="flex items-center flex-wrap">
+              <Link to={comment.author.id ? `/profile/${comment.author.id}` : "#"} className="hover:underline">
+                <h4 className="font-medium">{comment.author.name}</h4>
+              </Link>
               {isVerified && (
-                <Badge variant="verified" className="ml-1">Verificado</Badge>
+                <VerifiedBadge className="ml-1" />
               )}
               <p className="text-xs text-muted-foreground ml-2">{formattedDate}</p>
             </div>

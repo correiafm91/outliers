@@ -114,7 +114,7 @@ export default function BlogsPage() {
         <section className="py-12 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-12 animate-fade-in">
-              <h1 className="heading-xl mb-4">Blog Outliers</h1>
+              <h1 className="heading-xl mb-4">Publicações Outliers</h1>
               <p className="text-muted-foreground max-w-2xl">
                 Descubra os últimos insights e artigos.
               </p>
@@ -126,7 +126,7 @@ export default function BlogsPage() {
                 <Search className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Pesquisar artigos..."
+                  placeholder="Pesquisar publicações..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -196,7 +196,7 @@ export default function BlogsPage() {
               </div>
             ) : (
               <div className="text-center py-12 animate-fade-in">
-                <p className="text-muted-foreground">Nenhum artigo encontrado que corresponda aos seus critérios.</p>
+                <p className="text-muted-foreground">Nenhuma publicação encontrada que corresponda aos seus critérios.</p>
                 <Button variant="link" onClick={() => {setSearchQuery(""); setCategory("all");}}>
                   Limpar filtros
                 </Button>

@@ -36,7 +36,7 @@ export function CommentForm({ articleId, authorId, onCommentAdded }: CommentForm
     setIsSubmitting(true);
 
     try {
-      // Add the comment
+      // Add the comment with likes field initialized to 0
       const { error } = await supabase
         .from("comments")
         .insert({

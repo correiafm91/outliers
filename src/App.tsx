@@ -30,6 +30,11 @@ export default function App() {
           <Route path="/saved-articles" element={<SavedArticlesPage />} />
           <Route path="/saved" element={<SavedArticlesPage />} />
           <Route path="/search" element={<SearchPage />} />
+          
+          {/* Add the new routes for the cleaner URLs */}
+          <Route path="/outliers/publicacao/:id" element={<BlogDetailPage />} />
+          <Route path="/outliers/perfil/:id" element={<ProfilePage />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />

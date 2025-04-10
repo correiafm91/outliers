@@ -5,7 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CommentForm } from "@/components/blog/CommentForm";
 import { CommentList, Comment } from "@/components/blog/CommentList";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LikeButton } from "@/components/blog/LikeButton";
 import { SaveArticleButton } from "@/components/saved/SaveArticleButton";
@@ -26,6 +26,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel
 } from "@/components/ui/alert-dialog";
+import { Link } from "react-router-dom";
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,7 +71,7 @@ export default function BlogDetailPage() {
       setAuthor(author as Profile);
     } catch (error: any) {
       console.error("Erro ao carregar artigo:", error.message);
-      toast.error("Não foi possível carregar o artigo");
+      toast.error("Não foi possível carregar a publicação");
     } finally {
       setLoading(false);
     }
@@ -248,14 +249,18 @@ export default function BlogDetailPage() {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
-                  <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <Link to={`/profile/${author.id}`}>
+                  <Avatar>
+                    <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
+                    <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Link>
                 <div className="flex items-center">
-                  <p className="font-medium">{author.username}</p>
+                  <Link to={`/profile/${author.id}`} className="hover:underline">
+                    <p className="font-medium">{author.username}</p>
+                  </Link>
                   {author.username === "Outliers Oficial" && (
-                    <Badge variant="verified" className="ml-1">Verificado</Badge>
+                    <VerifiedBadge className="ml-1" />
                   )}
                   <p className="text-sm text-muted-foreground ml-2">{publishedDate}</p>
                 </div>

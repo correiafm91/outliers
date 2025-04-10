@@ -1,7 +1,7 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
@@ -36,4 +36,14 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   );
 }
 
-export { Badge, badgeVariants };
+// Special verified badge that includes the check icon
+function VerifiedBadge({ className, ...props }: Omit<BadgeProps, 'variant'>) {
+  return (
+    <Badge variant="verified" className={cn("inline-flex items-center", className)} {...props}>
+      <Check className="h-3 w-3" />
+      <span>Verificado</span>
+    </Badge>
+  );
+}
+
+export { Badge, badgeVariants, VerifiedBadge };
