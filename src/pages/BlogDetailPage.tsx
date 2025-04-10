@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Article, Profile } from "@/types/profile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -26,7 +26,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel
 } from "@/components/ui/alert-dialog";
-import { Trash } from "lucide-react";
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +33,7 @@ export default function BlogDetailPage() {
   const [author, setAuthor] = useState<Profile | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -126,38 +126,29 @@ export default function BlogDetailPage() {
         return;
       }
       
-      setLoading(true);
+      setDeleteLoading(true);
       
       const { error: savedArticlesError } = await supabase
         .from("saved_articles")
         .delete()
         .eq("article_id", article.id);
         
-      if (savedArticlesError) {
-        console.error("Error deleting saved articles:", savedArticlesError);
-        throw savedArticlesError;
-      }
+      if (savedArticlesError) throw savedArticlesError;
       
       const { error: likesError } = await supabase
         .from("likes")
         .delete()
         .eq("article_id", article.id);
       
-      if (likesError) {
-        console.error("Error deleting likes:", likesError);
-        throw likesError;
-      }
-        
+      if (likesError) throw likesError;
+      
       const { data: articleComments, error: commentsQueryError } = await supabase
         .from("comments")
         .select("id")
         .eq("article_id", article.id);
         
-      if (commentsQueryError) {
-        console.error("Error fetching comments:", commentsQueryError);
-        throw commentsQueryError;
-      }
-        
+      if (commentsQueryError) throw commentsQueryError;
+      
       if (articleComments && articleComments.length > 0) {
         const commentIds = articleComments.map(comment => comment.id);
         
@@ -166,10 +157,7 @@ export default function BlogDetailPage() {
           .delete()
           .in("comment_id", commentIds);
           
-        if (commentLikesError) {
-          console.error("Error deleting comment likes:", commentLikesError);
-          throw commentLikesError;
-        }
+        if (commentLikesError) throw commentLikesError;
       }
       
       const { error: commentsError } = await supabase
@@ -177,20 +165,14 @@ export default function BlogDetailPage() {
         .delete()
         .eq("article_id", article.id);
         
-      if (commentsError) {
-        console.error("Error deleting comments:", commentsError);
-        throw commentsError;
-      }
-        
+      if (commentsError) throw commentsError;
+      
       const { error: notificationsError } = await supabase
         .from("notifications")
         .delete()
         .eq("article_id", article.id);
       
-      if (notificationsError) {
-        console.error("Error deleting notifications:", notificationsError);
-        throw notificationsError;
-      }
+      if (notificationsError) throw notificationsError;
       
       const { error } = await supabase
         .from("articles")
@@ -204,7 +186,8 @@ export default function BlogDetailPage() {
     } catch (error: any) {
       console.error("Erro ao excluir publicação:", error.message);
       toast.error("Erro ao excluir publicação: " + (error.message || "Ocorreu um erro"));
-      setLoading(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -277,7 +260,19 @@ export default function BlogDetailPage() {
                       </div>
                       <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteArticle}>Excluir</AlertDialogAction>
+                        <AlertDialogAction 
+                          onClick={handleDeleteArticle}
+                          disabled={deleteLoading}
+                        >
+                          {deleteLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Excluindo...
+                            </>
+                          ) : (
+                            "Excluir"
+                          )}
+                        </AlertDialogAction>
                       </div>
                     </AlertDialogContent>
                   </AlertDialog>

@@ -2,111 +2,131 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Menu, Search, Bell, User, PenSquare, Bookmark, Twitter } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+  Search, 
+  Menu, 
+  X, 
+  LucideIcon, 
+  User, 
+  LogOut, 
+  Bell, 
+  Settings,
+  BookMarked
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-export function Navbar() {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+interface NavbarProps {
+  transparent?: boolean;
+}
+
+export function Navbar({ transparent = false }: NavbarProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [notificationsList, setNotificationsList] = useState<any[]>([]);
-  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (user) {
-      fetchUnreadNotifications();
-      
-      const timer = setInterval(fetchUnreadNotifications, 60000);
-      return () => clearInterval(timer);
+      fetchNotifications();
     }
   }, [user]);
 
-  const fetchUnreadNotifications = async () => {
-    if (!user) return;
-    
+  const fetchNotifications = async () => {
     try {
-      // First get count for badge
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact" })
-        .eq("user_id", user.id)
-        .eq("read", false);
-
-      if (error) {
-        console.error("Error fetching notification count:", error);
-        return;
-      }
-
-      setUnreadNotifications(count || 0);
-      
-      // Now get the actual notifications with related info
-      const { data: notifications, error: notifError } = await supabase
+      const { data, error } = await supabase
         .from("notifications")
         .select(`
-          id, 
-          type, 
-          read, 
-          created_at,
-          article_id,
-          actor_id,
-          profiles!actor_id (username, avatar_url)
+          *,
+          actor:profiles(username, avatar_url),
+          article:articles(title)
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
-        
-      if (notifError) {
-        console.error("Error fetching notifications:", notifError);
+
+      if (error) {
+        console.error("Error fetching notifications:", error);
         return;
       }
+
+      setNotifications(data || []);
       
-      setNotificationsList(notifications || []);
-    } catch (error) {
-      console.error("Error in fetchUnreadNotifications:", error);
+      // Count unread notifications
+      const unread = data ? data.filter(n => !n.read).length : 0;
+      setUnreadCount(unread);
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error.message);
     }
   };
-  
-  const handleNotificationClick = async (notificationId: string, articleId: string | null) => {
+
+  const handleMarkAsRead = async (notificationId) => {
     try {
-      // Mark notification as read
       const { error } = await supabase
         .from("notifications")
         .update({ read: true })
         .eq("id", notificationId);
-        
-      if (error) throw error;
-      
-      // Navigate to article if we have an ID
-      if (articleId) {
-        navigate(`/blog/${articleId}`);
+
+      if (error) {
+        console.error("Error marking notification as read:", error);
+        return;
       }
-      
-      // Refresh notifications count
-      fetchUnreadNotifications();
-    } catch (error) {
-      console.error("Error updating notification:", error);
+
+      fetchNotifications();
+    } catch (error: any) {
+      console.error("Error marking notification as read:", error.message);
     }
   };
 
-  const handleLogout = async () => {
+  const handleMarkAllAsRead = async () => {
     try {
-      await signOut();
-      navigate("/auth");
-    } catch (error) {
-      console.error("Error logging out:", error);
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
+
+      if (error) {
+        console.error("Error marking all notifications as read:", error);
+        return;
+      }
+
+      fetchNotifications();
+    } catch (error: any) {
+      console.error("Error marking all notifications as read:", error.message);
     }
   };
 
@@ -118,193 +138,266 @@ export function Navbar() {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center space-x-4">
-          <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src="https://i.postimg.cc/yd1dNnBH/High-resolution-stock-photo-A-professional-commercial-image-showcasing-a-grey-letter-O-logo-agains.jpg" 
-              alt="Outliers Logo" 
-              className="h-8 w-8 object-contain"
-            />
-            <span className="text-xl font-bold hidden sm:inline-block">Outliers</span>
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full border-b transition-colors",
+        isScrolled 
+          ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" 
+          : transparent 
+            ? "bg-transparent border-transparent"
+            : "bg-background"
+      )}
+    >
+      <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-6 md:gap-10">
+          <Link to="/" className="hidden md:flex items-center space-x-2">
+            <span className="hidden font-bold sm:inline-block text-xl">
+              Networking Brasil
+            </span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-4">
-            <Button variant="link" asChild>
-              <Link to="/">Início</Link>
-            </Button>
-            <Button variant="link" asChild>
-              <Link to="/blogs">Artigos</Link>
-            </Button>
-            <Button variant="link" asChild>
-              <Link to="/saved-articles">Salvos</Link>
-            </Button>
-          </nav>
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+
+          {/* Desktop navigation */}
+          <div className="hidden md:flex">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <Link to="/blogs" className={navigationMenuTriggerStyle()}>
+                    Explorar
+                  </Link>
+                </NavigationMenuItem>
+                {user && (
+                  <NavigationMenuItem>
+                    <Link to="/saved" className={navigationMenuTriggerStyle()}>
+                      Salvos
+                    </Link>
+                  </NavigationMenuItem>
+                )}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
         </div>
-        
-        <div className="hidden md:flex items-center space-x-4">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Pesquisar..."
-              className="w-[200px] lg:w-[300px] pl-8 bg-secondary text-secondary-foreground focus:ring-primary"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+
+        {/* Search bar */}
+        <div className="hidden md:flex mx-4 flex-1 max-w-md">
+          <form onSubmit={handleSearch} className="w-full">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Pesquisar..."
+                className="w-full pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </form>
-          
+        </div>
+
+        {/* Auth and user menu */}
+        <div className="flex items-center gap-2">
+          {/* Mobile search button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => navigate("/search")}
+          >
+            <Search className="h-6 w-6" />
+          </Button>
+
           {user ? (
             <>
-              <Button variant="outline" size="icon" onClick={() => navigate("/new-article")} title="Novo Artigo">
-                <PenSquare className="h-5 w-5" />
+              <Button 
+                variant="outline" 
+                className="hidden md:flex"
+                onClick={() => navigate("/new-article")}
+              >
+                Criar
               </Button>
-              
-              <Button variant="ghost" size="icon" onClick={() => navigate("/saved-articles")} title="Artigos Salvos">
-                <Bookmark className="h-5 w-5" />
-              </Button>
-              
+
+              {/* Notifications dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="relative"
-                    title="Notificações"
-                  >
+                  <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
-                    {unreadNotifications > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
-                      >
-                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                      </Badge>
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+                    {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
+                        Marcar todas como lidas
+                      </Button>
+                    )}
+                  </div>
                   <DropdownMenuSeparator />
-                  
-                  {notificationsList.length > 0 ? (
-                    notificationsList.map(notif => (
-                      <DropdownMenuItem 
-                        key={notif.id} 
-                        className={`p-3 cursor-pointer ${!notif.read ? 'bg-secondary/40' : ''}`}
-                        onClick={() => handleNotificationClick(notif.id, notif.article_id)}
-                      >
-                        <div className="flex items-start gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={notif.profiles?.avatar_url || ""} />
-                            <AvatarFallback>{notif.profiles?.username?.slice(0, 2) || "??"}</AvatarFallback>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <DropdownMenuItem 
+                          key={notification.id}
+                          className={cn(
+                            "flex items-start p-3 cursor-pointer",
+                            !notification.read && "bg-muted/50"
+                          )}
+                          onClick={() => {
+                            if (!notification.read) {
+                              handleMarkAsRead(notification.id);
+                            }
+                            if (notification.article_id) {
+                              navigate(`/blog/${notification.article_id}`);
+                            } else if (notification.type === 'follow') {
+                              navigate(`/profile/${notification.actor_id}`);
+                            }
+                          }}
+                        >
+                          <Avatar className="h-8 w-8 mr-3 mt-1">
+                            <AvatarImage 
+                              src={notification.actor?.avatar_url || undefined} 
+                              alt={notification.actor?.username || "User"} 
+                            />
+                            <AvatarFallback>
+                              {notification.actor?.username?.slice(0, 2).toUpperCase() || "U"}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm">
-                              <span className="font-medium">{notif.profiles?.username}</span>
-                              {notif.type === 'like' && ' curtiu seu artigo'}
-                              {notif.type === 'comment' && ' comentou em seu artigo'}
-                              {notif.type === 'follow' && ' começou a seguir você'}
+                              <span className="font-medium">
+                                {notification.actor?.username || "Alguém"}
+                              </span>
+                              {notification.type === 'like' && ' curtiu sua publicação '}
+                              {notification.type === 'comment' && ' comentou em sua publicação '}
+                              {notification.type === 'follow' && ' começou a seguir você '}
+                              {notification.article && (
+                                <span className="font-medium">
+                                  "{notification.article.title}"
+                                </span>
+                              )}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(notif.created_at).toLocaleDateString('pt-BR')}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(notification.created_at).toLocaleDateString('pt-BR', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
                             </p>
                           </div>
-                        </div>
-                      </DropdownMenuItem>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      Nenhuma notificação
-                    </div>
-                  )}
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-muted-foreground">
+                        Nenhuma notificação recente
+                      </div>
+                    )}
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-              
+
+              {/* User dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar>
-                      <AvatarImage src={profile?.avatar_url || ""} alt={profile?.username} />
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                        {profile?.username?.slice(0, 2).toUpperCase() || user.email?.slice(0, 2).toUpperCase()}
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src={profile?.avatar_url || undefined} 
+                        alt={profile?.username || "User"} 
+                      />
+                      <AvatarFallback>
+                        {profile?.username?.slice(0, 2).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to={`/profile/${user.id}`}>Meu Perfil</Link>
+                  <DropdownMenuItem onClick={() => navigate(`/profile/${user.id}`)}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/new-article">Novo Artigo</Link>
+                  <DropdownMenuItem onClick={() => navigate("/saved")}>
+                    <BookMarked className="mr-2 h-4 w-4" />
+                    <span>Salvos</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/saved-articles">Artigos Salvos</Link>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    Sair
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
-            <Button onClick={() => navigate("/auth")} variant="default">
-              Entrar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/auth">
+                <Button variant="outline" size="sm">Entrar</Button>
+              </Link>
+              <Link to="/auth?register=true">
+                <Button size="sm">Cadastrar</Button>
+              </Link>
+            </div>
           )}
         </div>
-        
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMobileMenu(!showMobileMenu)}>
-          <Menu className="h-6 w-6" />
-        </Button>
       </div>
-      
-      {showMobileMenu && (
-        <div className="md:hidden border-t border-border bg-background p-4 animate-fade-in">
-          <nav className="grid gap-2">
-            <Link to="/" className="flex items-center py-2 hover:text-primary/80">Início</Link>
-            <Link to="/blogs" className="flex items-center py-2 hover:text-primary/80">Artigos</Link>
-            <Link to="/saved-articles" className="flex items-center py-2 hover:text-primary/80">Artigos Salvos</Link>
-            <Link to="/search" className="flex items-center py-2 hover:text-primary/80">Pesquisar</Link>
-            
-            {user ? (
-              <>
-                <Link to={`/profile/${user.id}`} className="flex items-center py-2 hover:text-primary/80">
-                  <User className="mr-2 h-4 w-4" />
-                  Meu Perfil
-                </Link>
-                <Link to="/new-article" className="flex items-center py-2 hover:text-primary/80">
-                  <PenSquare className="mr-2 h-4 w-4" />
-                  Novo Artigo
-                </Link>
-                <Button variant="outline" className="mt-2" onClick={handleLogout}>
-                  Sair
-                </Button>
-              </>
-            ) : (
-              <Button className="mt-2" onClick={() => navigate("/auth")}>
-                Entrar
-              </Button>
-            )}
-            
-            <div className="py-2 mt-2">
-              <form onSubmit={handleSearch} className="relative">
+
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t">
+          <div className="container py-4 px-4 space-y-4">
+            <form onSubmit={handleSearch} className="w-full">
+              <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Pesquisar..."
-                  className="w-full pl-8 bg-secondary text-secondary-foreground"
+                  className="w-full pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-              </form>
+              </div>
+            </form>
+            <div className="space-y-1">
+              <Link to="/blogs" className="block py-2 px-3 rounded-md hover:bg-muted">
+                Explorar
+              </Link>
+              {user && (
+                <>
+                  <Link to="/saved" className="block py-2 px-3 rounded-md hover:bg-muted">
+                    Salvos
+                  </Link>
+                  <Link to="/new-article" className="block py-2 px-3 rounded-md hover:bg-muted">
+                    Criar publicação
+                  </Link>
+                </>
+              )}
             </div>
-          </nav>
+          </div>
         </div>
       )}
     </header>

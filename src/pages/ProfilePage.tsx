@@ -323,6 +323,77 @@ export default function ProfilePage() {
 
   const handleDeleteArticle = async (articleId: string) => {
     try {
+      // First, delete saved_articles references
+      const { error: savedArticlesError } = await supabase
+        .from("saved_articles")
+        .delete()
+        .eq("article_id", articleId);
+        
+      if (savedArticlesError) {
+        console.error("Error deleting saved articles:", savedArticlesError);
+        throw savedArticlesError;
+      }
+      
+      // Delete likes
+      const { error: likesError } = await supabase
+        .from("likes")
+        .delete()
+        .eq("article_id", articleId);
+      
+      if (likesError) {
+        console.error("Error deleting likes:", likesError);
+        throw likesError;
+      }
+      
+      // Get all comments for this article
+      const { data: articleComments, error: commentsQueryError } = await supabase
+        .from("comments")
+        .select("id")
+        .eq("article_id", articleId);
+        
+      if (commentsQueryError) {
+        console.error("Error fetching comments:", commentsQueryError);
+        throw commentsQueryError;
+      }
+      
+      // If there are comments, delete their likes first
+      if (articleComments && articleComments.length > 0) {
+        const commentIds = articleComments.map(comment => comment.id);
+        
+        const { error: commentLikesError } = await supabase
+          .from("comment_likes")
+          .delete()
+          .in("comment_id", commentIds);
+          
+        if (commentLikesError) {
+          console.error("Error deleting comment likes:", commentLikesError);
+          throw commentLikesError;
+        }
+      }
+      
+      // Delete comments
+      const { error: commentsError } = await supabase
+        .from("comments")
+        .delete()
+        .eq("article_id", articleId);
+        
+      if (commentsError) {
+        console.error("Error deleting comments:", commentsError);
+        throw commentsError;
+      }
+      
+      // Delete notifications
+      const { error: notificationsError } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("article_id", articleId);
+      
+      if (notificationsError) {
+        console.error("Error deleting notifications:", notificationsError);
+        throw notificationsError;
+      }
+
+      // Finally delete the article
       const { error } = await supabase
         .from("articles")
         .delete()
@@ -334,7 +405,7 @@ export default function ProfilePage() {
       toast.success("Publicação excluída com sucesso");
     } catch (error: any) {
       console.error("Erro ao excluir publicação:", error.message);
-      toast.error("Não foi possível excluir a publicação");
+      toast.error("Não foi possível excluir a publicação: " + (error.message || "Ocorreu um erro"));
     }
   };
 
@@ -365,7 +436,7 @@ export default function ProfilePage() {
     );
   }
 
-  const isVerified = profile.username === "Outliers Ofc";
+  const isVerified = profile.username === "Outliers Ofc" || profile.username === "Outliers Oficial";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
