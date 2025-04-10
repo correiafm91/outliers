@@ -22,12 +22,13 @@ export default function App() {
         <Routes>
           <Route path="/" element={<IndexPage />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/blog" element={<BlogsPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/blog/:id" element={<BlogDetailPage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/new-article" element={<NewArticlePage />} />
           <Route path="/edit-article/:id" element={<EditArticlePage />} />
           <Route path="/saved-articles" element={<SavedArticlesPage />} />
+          <Route path="/saved" element={<SavedArticlesPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

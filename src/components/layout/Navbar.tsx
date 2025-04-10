@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   Menu, 
@@ -143,6 +144,8 @@ export function Navbar({ transparent = false }: NavbarProps) {
     navigate("/");
   };
 
+  const isVerified = profile?.username === "Outliers Oficial";
+
   return (
     <header
       className={cn(
@@ -238,8 +241,8 @@ export function Navbar({ transparent = false }: NavbarProps) {
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1 right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
                       </span>
                     )}
                   </Button>
@@ -256,56 +259,62 @@ export function Navbar({ transparent = false }: NavbarProps) {
                   <DropdownMenuSeparator />
                   <div className="max-h-80 overflow-y-auto">
                     {notifications.length > 0 ? (
-                      notifications.map((notification) => (
-                        <DropdownMenuItem 
-                          key={notification.id}
-                          className={cn(
-                            "flex items-start p-3 cursor-pointer",
-                            !notification.read && "bg-muted/50"
-                          )}
-                          onClick={() => {
-                            if (!notification.read) {
-                              handleMarkAsRead(notification.id);
-                            }
-                            if (notification.article_id) {
-                              navigate(`/blog/${notification.article_id}`);
-                            } else if (notification.type === 'follow') {
-                              navigate(`/profile/${notification.actor_id}`);
-                            }
-                          }}
-                        >
-                          <Avatar className="h-8 w-8 mr-3 mt-1">
-                            <AvatarImage 
-                              src={notification.actor?.avatar_url || undefined} 
-                              alt={notification.actor?.username || "User"} 
-                            />
-                            <AvatarFallback>
-                              {notification.actor?.username?.slice(0, 2).toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm">
-                              <span className="font-medium">
-                                {notification.actor?.username || "Alguém"}
-                              </span>
-                              {notification.type === 'like' && ' curtiu sua publicação '}
-                              {notification.type === 'comment' && ' comentou em sua publicação '}
-                              {notification.type === 'follow' && ' começou a seguir você '}
-                              {notification.article && (
+                      notifications.map((notification) => {
+                        const isActorVerified = notification.actor?.username === "Outliers Oficial";
+                        return (
+                          <DropdownMenuItem 
+                            key={notification.id}
+                            className={cn(
+                              "flex items-start p-3 cursor-pointer",
+                              !notification.read && "bg-muted/50"
+                            )}
+                            onClick={() => {
+                              if (!notification.read) {
+                                handleMarkAsRead(notification.id);
+                              }
+                              if (notification.article_id) {
+                                navigate(`/blog/${notification.article_id}`);
+                              } else if (notification.type === 'follow') {
+                                navigate(`/profile/${notification.actor_id}`);
+                              }
+                            }}
+                          >
+                            <Avatar className="h-8 w-8 mr-3 mt-1">
+                              <AvatarImage 
+                                src={notification.actor?.avatar_url || undefined} 
+                                alt={notification.actor?.username || "User"} 
+                              />
+                              <AvatarFallback>
+                                {notification.actor?.username?.slice(0, 2).toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm">
                                 <span className="font-medium">
-                                  "{notification.article.title}"
+                                  {notification.actor?.username || "Alguém"}
                                 </span>
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(notification.created_at).toLocaleDateString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </p>
-                          </div>
-                        </DropdownMenuItem>
-                      ))
+                                {isActorVerified && (
+                                  <Badge variant="verified" className="ml-1 text-xs">Verificado</Badge>
+                                )}
+                                {notification.type === 'like' && ' curtiu sua publicação '}
+                                {notification.type === 'comment' && ' comentou em sua publicação '}
+                                {notification.type === 'follow' && ' começou a seguir você '}
+                                {notification.article && (
+                                  <span className="font-medium">
+                                    "{notification.article.title}"
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(notification.created_at).toLocaleDateString('pt-BR', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </p>
+                            </div>
+                          </DropdownMenuItem>
+                        );
+                      })
                     ) : (
                       <div className="px-4 py-3 text-sm text-muted-foreground">
                         Nenhuma notificação recente
@@ -331,7 +340,10 @@ export function Navbar({ transparent = false }: NavbarProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+                  <div className="flex items-center gap-2 px-2 pt-1">
+                    <DropdownMenuLabel>{profile?.username}</DropdownMenuLabel>
+                    {isVerified && <Badge variant="verified">Verificado</Badge>}
+                  </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate(`/profile/${user.id}`)}>
                     <User className="mr-2 h-4 w-4" />

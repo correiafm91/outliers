@@ -23,11 +23,11 @@ export function ShareButton({ title, id, type, variant = 'outline', size = 'defa
   const [open, setOpen] = useState(false);
   
   const getShareUrl = () => {
-    const baseUrl = window.location.origin;
+    // Use a shorter URL format
     if (type === 'article') {
-      return `${baseUrl}/blog/${id}`;
+      return `outliers/publicacao`;
     } else {
-      return `${baseUrl}/profile/${id}`;
+      return `outliers/perfil`;
     }
   };
   

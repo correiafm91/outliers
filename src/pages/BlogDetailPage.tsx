@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Article, Profile } from "@/types/profile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2, Trash } from "lucide-react";
+import { ArrowLeft, Loader2, Trash } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -191,6 +191,10 @@ export default function BlogDetailPage() {
     }
   };
 
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -226,6 +230,18 @@ export default function BlogDetailPage() {
       
       <main className="flex-1">
         <article className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-6">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleGoBack}
+              className="flex items-center gap-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
+          
           <header className="mb-8 animate-fade-in">
             <Badge variant="secondary" className="mb-4">{article.sector}</Badge>
             <h1 className="text-4xl font-bold mb-6">{article.title}</h1>
@@ -236,9 +252,12 @@ export default function BlogDetailPage() {
                   <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
                   <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex items-center">
                   <p className="font-medium">{author.username}</p>
-                  <p className="text-sm text-muted-foreground">{publishedDate}</p>
+                  {author.username === "Outliers Oficial" && (
+                    <Badge variant="verified" className="ml-1">Verificado</Badge>
+                  )}
+                  <p className="text-sm text-muted-foreground ml-2">{publishedDate}</p>
                 </div>
               </div>
               

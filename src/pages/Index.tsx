@@ -78,7 +78,7 @@ export default function Index() {
         <section className="py-16 md:py-24 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-16 animate-once animate-fade-in">
-              <h1 className="heading-xl max-w-3xl mb-6">Plataforma de Blog e Compartilhamento</h1>
+              <h1 className="heading-xl max-w-3xl mb-6">Novidades de hoje</h1>
               <Button size="lg" asChild>
                 <Link to="/blogs">
                   Explorar Artigos

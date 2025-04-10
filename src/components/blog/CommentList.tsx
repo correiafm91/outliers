@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ThumbsUp, Trash } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -185,6 +186,7 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
 
   // Verificar se o usuário é o autor ou se é um administrador
   const canDelete = user && (user.id === comment.author.id || user.email === "admin@example.com");
+  const isVerified = comment.author.name === "Outliers Oficial";
   
   const formattedDate = formatDistanceToNow(new Date(comment.created_at), { 
     addSuffix: true,
@@ -203,9 +205,12 @@ function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: 
         
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center">
               <h4 className="font-medium">{comment.author.name}</h4>
-              <p className="text-xs text-muted-foreground">{formattedDate}</p>
+              {isVerified && (
+                <Badge variant="verified" className="ml-1">Verificado</Badge>
+              )}
+              <p className="text-xs text-muted-foreground ml-2">{formattedDate}</p>
             </div>
             
             {canDelete && (
