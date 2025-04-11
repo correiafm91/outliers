@@ -1,6 +1,7 @@
 
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 
@@ -19,25 +20,27 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<IndexPage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/blogs" element={<BlogsPage />} />
-          <Route path="/blog/:id" element={<BlogDetailPage />} />
-          <Route path="/profile/:id" element={<ProfilePage />} />
-          <Route path="/new-article" element={<NewArticlePage />} />
-          <Route path="/edit-article/:id" element={<EditArticlePage />} />
-          <Route path="/saved-articles" element={<SavedArticlesPage />} />
-          <Route path="/saved" element={<SavedArticlesPage />} />
-          <Route path="/search" element={<SearchPage />} />
-          
-          {/* Add the new routes for the cleaner URLs */}
-          <Route path="/outliers/publicacao/:id" element={<BlogDetailPage />} />
-          <Route path="/outliers/perfil/:id" element={<ProfilePage />} />
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+        <ChatProvider>
+          <Routes>
+            <Route path="/" element={<IndexPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/blogs" element={<BlogsPage />} />
+            <Route path="/blog/:id" element={<BlogDetailPage />} />
+            <Route path="/profile/:id" element={<ProfilePage />} />
+            <Route path="/new-article" element={<NewArticlePage />} />
+            <Route path="/edit-article/:id" element={<EditArticlePage />} />
+            <Route path="/saved-articles" element={<SavedArticlesPage />} />
+            <Route path="/saved" element={<SavedArticlesPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            
+            {/* Add the new routes for the cleaner URLs */}
+            <Route path="/outliers/publicacao/:id" element={<BlogDetailPage />} />
+            <Route path="/outliers/perfil/:id" element={<ProfilePage />} />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </ChatProvider>
       </AuthProvider>
     </ThemeProvider>
   );

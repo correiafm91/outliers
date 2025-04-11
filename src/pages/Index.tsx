@@ -1,176 +1,121 @@
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { NavbarWithChat } from "@/components/layout/NavbarWithChat";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ShieldCheck, Network, Layers, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Article, Profile } from "@/types/profile";
-import { Loader2 } from "lucide-react";
-import { BlogCard } from "@/components/blog/BlogCard";
 
-export default function Index() {
-  const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
-  const [recentArticles, setRecentArticles] = useState<Article[]>([]);
-  const [authorProfiles, setAuthorProfiles] = useState<Record<string, Profile>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchArticles();
-  }, []);
-
-  const fetchArticles = async () => {
-    try {
-      setLoading(true);
-      
-      // Buscar artigos recentes
-      const { data: articles, error } = await supabase
-        .from('articles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
-      
-      if (articles && articles.length > 0) {
-        // Separar artigos em destaque (3 primeiros) e recentes (4 seguintes)
-        const featured = articles.slice(0, 3);
-        const recent = articles.slice(3, 7);
-        
-        setFeaturedArticles(featured as Article[]);
-        setRecentArticles(recent as Article[]);
-        
-        // Obter IDs de autores únicos
-        const authorIds = Array.from(new Set([...featured, ...recent].map(article => article.author_id)));
-        
-        // Buscar perfis de autores
-        if (authorIds.length > 0) {
-          const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', authorIds);
-            
-          if (profilesError) throw profilesError;
-          
-          // Criar mapa de perfis por ID
-          const profileMap: Record<string, Profile> = {};
-          profiles?.forEach(profile => {
-            profileMap[profile.id] = profile;
-          });
-          
-          setAuthorProfiles(profileMap);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao buscar artigos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function IndexPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
+    <div className="flex flex-col min-h-screen">
+      <NavbarWithChat transparent />
       
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="py-16 md:py-24 px-4">
-          <div className="container mx-auto">
-            <div className="flex flex-col items-center text-center mb-16 animate-once animate-fade-in">
-              <h1 className="heading-xl max-w-3xl mb-6">Novidades de hoje</h1>
-              <Button size="lg" asChild>
-                <Link to="/blogs">
-                  Explorar Artigos
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            
-            {/* Featured Posts */}
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : featuredArticles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {featuredArticles.map((article, index) => {
-                  const author = authorProfiles[article.author_id];
-                  return (
-                    <div key={article.id} className="animate-once animate-fade-in delay-200" style={{ animationDelay: `${index * 150}ms` }}>
-                      <BlogCard post={{
-                        id: article.id,
-                        title: article.title,
-                        excerpt: article.excerpt || "",
-                        content: article.content,
-                        author: {
-                          name: author?.username || "Autor desconhecido",
-                          avatar: author?.avatar_url || ""
-                        },
-                        published_at: article.created_at,
-                        category: article.sector || "Geral",
-                        image: article.image_url || "",
-                        likes: 0,
-                        comments: 0,
-                        aspect_ratio: article.aspect_ratio
-                      }} featured={true} />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Nenhum artigo em destaque encontrado.</p>
-                <Button variant="link" asChild className="mt-2">
-                  <Link to="/new-article">Criar um artigo</Link>
+        {/* Hero section */}
+        <section className="relative bg-gradient-to-b from-blue-50 via-blue-100 to-white dark:from-gray-900 dark:via-gray-800 dark:to-background py-20 sm:py-32">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                Conectando profissionais e ideias
+              </h1>
+              <p className="mt-6 text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Uma plataforma de networking onde profissionais compartilham conhecimento, criam conexões e encontram oportunidades.
+              </p>
+              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="text-base">
+                  <Link to="/blogs">Explorar conteúdo</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="text-base">
+                  <Link to="/auth?register=true">Criar conta</Link>
                 </Button>
               </div>
-            )}
+            </div>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent"></div>
+        </section>
+
+        {/* Features section */}
+        <section className="py-16 sm:py-24">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Feito para profissionais como você
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+                Descubra as ferramentas que vão impulsionar sua carreira e seus negócios
+              </p>
+            </div>
+            
+            <div className="mt-12 grid gap-8 md:grid-cols-3">
+              <div className="bg-card rounded-lg p-8 shadow-sm border flex flex-col items-center text-center">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Network className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-medium mb-3">Networking Eficiente</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Conecte-se com profissionais do seu setor e expanda sua rede de contatos de forma significativa.
+                </p>
+              </div>
+              
+              <div className="bg-card rounded-lg p-8 shadow-sm border flex flex-col items-center text-center">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Layers className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-medium mb-3">Compartilhe Conhecimento</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Publique artigos, dicas e insights do seu setor para estabelecer sua autoridade profissional.
+                </p>
+              </div>
+              
+              <div className="bg-card rounded-lg p-8 shadow-sm border flex flex-col items-center text-center">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <ShieldCheck className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-medium mb-3">Ambiente Profissional</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Um espaço dedicado exclusivamente para assuntos profissionais e empresariais.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
         
-        {/* Recent Posts */}
-        {recentArticles.length > 0 && (
-          <section className="py-16 px-4 bg-secondary/30">
-            <div className="container mx-auto">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="heading-lg animate-once animate-fade-in">Artigos Recentes</h2>
-                <Button variant="outline" asChild className="animate-once animate-fade-in">
-                  <Link to="/blogs">Ver Todos</Link>
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-6">
-                {recentArticles.map((article, index) => {
-                  const author = authorProfiles[article.author_id];
-                  return (
-                    <div key={article.id} className="animate-once animate-fade-in" style={{ animationDelay: `${index * 150}ms` }}>
-                      <BlogCard post={{
-                        id: article.id,
-                        title: article.title,
-                        excerpt: article.excerpt || "",
-                        content: article.content,
-                        author: {
-                          name: author?.username || "Autor desconhecido",
-                          avatar: author?.avatar_url || ""
-                        },
-                        published_at: article.created_at,
-                        category: article.sector || "Geral",
-                        image: article.image_url || "",
-                        likes: 0,
-                        comments: 0,
-                        aspect_ratio: article.aspect_ratio
-                      }} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* CTA Section */}
+        <section className="bg-primary text-primary-foreground py-16">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-4">Comece sua jornada hoje</h2>
+            <p className="text-lg opacity-90 max-w-2xl mx-auto mb-8">
+              Junte-se a milhares de profissionais que já estão conectados e expandindo seus negócios.
+            </p>
+            <Button asChild size="lg" variant="secondary" className="gap-2">
+              <Link to="/auth?register=true">
+                Criar uma conta <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
       </main>
-      
-      <Footer />
+
+      {/* Footer */}
+      <footer className="border-t py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-0">
+              © 2025 Networking Brasil. Todos os direitos reservados.
+            </p>
+            <div className="flex space-x-6">
+              <Link to="/blogs" className="text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+                Explorar
+              </Link>
+              <Link to="/auth" className="text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+                Entrar
+              </Link>
+              <Link to="/auth?register=true" className="text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+                Cadastrar
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
