@@ -26,7 +26,7 @@ export function ShareButton({ title, id, type, variant = 'outline', size = 'defa
     // Use the window.location to get the base URL
     const baseUrl = window.location.origin;
     
-    // Build a shorter, cleaner URL format
+    // Build the URL format
     if (type === 'article') {
       return `${baseUrl}/outliers/publicacao/${id}`;
     } else {
