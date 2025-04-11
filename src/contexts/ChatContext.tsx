@@ -169,7 +169,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             .select('id', { count: 'exact', head: true })
             .eq('conversation_id', conv.id)
             .not('sender_id', 'eq', user.id)
-            .not('message_reads.user_id', 'eq', user.id);
+            .is('message_reads.user_id', null);
             
           if (unreadError) throw unreadError;
           
@@ -181,7 +181,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             participants: participantsMap[conv.id] || [],
             last_message: lastMessageData && lastMessageData.length > 0 ? lastMessageData[0] : null,
             unread_count: unreadCount
-          };
+          } as Conversation;
         }));
         
         setConversations(sortConversations(conversationsWithDetails));
@@ -211,30 +211,43 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         .from('messages')
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey(id, username, avatar_url),
-          likes:message_likes(id, user_id)
+          sender:profiles!messages_sender_id_fkey(id, username, avatar_url)
         `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
         
       if (error) throw error;
       
-      // Process messages to add is_liked_by_me and likes_count
-      const processedMessages = data.map(message => {
-        const likes = message.likes || [];
-        const isLikedByMe = likes.some((like: any) => like.user_id === user.id);
-        const likesCount = likes.length;
+      if (data) {
+        // We need to manually get likes count for each message
+        const processedMessages = await Promise.all(data.map(async (message) => {
+          // Get likes count
+          const { count: likesCount, error: likesError } = await supabase
+            .from('message_likes')
+            .select('id', { count: 'exact', head: true })
+            .eq('message_id', message.id);
+            
+          if (likesError) throw likesError;
+          
+          // Check if liked by current user
+          const { data: userLike, error: userLikeError } = await supabase
+            .from('message_likes')
+            .select('id')
+            .eq('message_id', message.id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (userLikeError) throw userLikeError;
+          
+          return {
+            ...message,
+            likes_count: likesCount || 0,
+            is_liked_by_me: !!userLike
+          } as Message;
+        }));
         
-        delete message.likes; // Remove the likes array as we've processed it
-        
-        return {
-          ...message,
-          is_liked_by_me: isLikedByMe,
-          likes_count: likesCount
-        };
-      });
-      
-      setActiveConversationMessages(processedMessages);
+        setActiveConversationMessages(processedMessages);
+      }
       
       // Mark all messages as read
       if (data && data.length > 0) {
@@ -274,32 +287,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     
     try {
       // First, check if a conversation already exists between these users
-      const { data: existingParticipants, error: participantError } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id')
-        .eq('user_id', user.id);
-        
-      if (participantError) throw participantError;
-      
-      if (existingParticipants && existingParticipants.length > 0) {
-        // Get conversation IDs where current user is a participant
-        const userConvIds = existingParticipants.map(p => p.conversation_id);
-        
-        // Check if recipient is also in any of these conversations
-        const { data: recipientParticipants, error: recipientError } = await supabase
-          .from('conversation_participants')
-          .select('conversation_id')
-          .eq('user_id', recipientId)
-          .in('conversation_id', userConvIds);
-          
-        if (recipientError) throw recipientError;
-        
-        if (recipientParticipants && recipientParticipants.length > 0) {
-          // Direct conversation already exists, return its ID
-          const existingConvId = recipientParticipants[0].conversation_id;
-          setActiveConversationId(existingConvId);
-          return existingConvId;
+      const { data: existingConversations, error: existingError } = await supabase.rpc(
+        'find_direct_conversation', 
+        { 
+          user1_id: user.id,
+          user2_id: recipientId 
         }
+      );
+      
+      if (existingError) throw existingError;
+      
+      if (existingConversations && existingConversations.length > 0) {
+        const existingConversationId = existingConversations[0].id;
+        setActiveConversationId(existingConversationId);
+        return existingConversationId;
       }
       
       // If we get here, no conversation exists yet, so create a new one
@@ -356,8 +357,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         
       if (error) throw error;
       
-      // Update the active conversation's last message and timestamp
-      // This happens automatically via the real-time subscription
+      // Update the conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', activeConversationId);
       
     } catch (error: any) {
       console.error('Error sending message:', error.message);
