@@ -26,12 +26,12 @@ import {
   Search, 
   Menu, 
   X, 
+  LucideIcon, 
   User, 
   LogOut, 
   Bell, 
   Settings,
-  BookMarked,
-  MessageSquare
+  BookMarked
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,10 +39,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface NavbarProps {
   transparent?: boolean;
-  chatButton?: React.ReactNode;
 }
 
-export function Navbar({ transparent = false, chatButton }: NavbarProps) {
+export function Navbar({ transparent = false }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,9 +234,6 @@ export function Navbar({ transparent = false, chatButton }: NavbarProps) {
                 Criar
               </Button>
 
-              {/* Chat button */}
-              {chatButton}
-
               {/* Notifications dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -303,8 +299,6 @@ export function Navbar({ transparent = false, chatButton }: NavbarProps) {
                                 {notification.type === 'like' && ' curtiu sua publicação '}
                                 {notification.type === 'comment' && ' comentou em sua publicação '}
                                 {notification.type === 'follow' && ' começou a seguir você '}
-                                {notification.type === 'message' && ' enviou uma mensagem para você '}
-                                {notification.type === 'message_like' && ' curtiu sua mensagem '}
                                 {notification.article && (
                                   <span className="font-medium">
                                     "{notification.article.title}"
