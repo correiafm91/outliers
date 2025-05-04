@@ -78,6 +78,128 @@ type ExtendedDatabase = Database & {
           created_at?: string;
         };
       };
+      groups: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          owner_id: string;
+          type: 'public' | 'private';
+          created_at: string;
+          updated_at: string;
+          image_url: string | null;
+          member_count: number;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          owner_id: string;
+          type?: 'public' | 'private';
+          created_at?: string;
+          updated_at?: string;
+          image_url?: string | null;
+          member_count?: number;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          owner_id?: string;
+          type?: 'public' | 'private';
+          created_at?: string;
+          updated_at?: string;
+          image_url?: string | null;
+          member_count?: number;
+        };
+      };
+      group_members: {
+        Row: {
+          id: string;
+          group_id: string;
+          user_id: string;
+          role: string;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          user_id: string;
+          role?: string;
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          user_id?: string;
+          role?: string;
+          joined_at?: string;
+        };
+      };
+      group_join_requests: {
+        Row: {
+          id: string;
+          group_id: string;
+          user_id: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          user_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          user_id?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      group_messages: {
+        Row: {
+          id: string;
+          group_id: string;
+          user_id: string;
+          content: string | null;
+          image_url: string | null;
+          video_url: string | null;
+          article_id: string | null;
+          created_at: string;
+          updated_at: string;
+          is_deleted: boolean;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          user_id: string;
+          content?: string | null;
+          image_url?: string | null;
+          video_url?: string | null;
+          article_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_deleted?: boolean;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          user_id?: string;
+          content?: string | null;
+          image_url?: string | null;
+          video_url?: string | null;
+          article_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_deleted?: boolean;
+        };
+      };
       profiles: {
         Row: {
           id: string;
@@ -207,9 +329,6 @@ type ExtendedDatabase = Database & {
   };
 };
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
 export const supabase = createClient<ExtendedDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -231,6 +350,7 @@ const ensureStorageBuckets = async () => {
     const profilesBucketExists = buckets.some(bucket => bucket.name === 'profiles');
     const imagesBucketExists = buckets.some(bucket => bucket.name === 'images');
     const videosBucketExists = buckets.some(bucket => bucket.name === 'videos');
+    const groupsBucketExists = buckets.some(bucket => bucket.name === 'groups');
     
     // Store buckets creation promises
     const createBucketsPromises = [];
@@ -245,6 +365,10 @@ const ensureStorageBuckets = async () => {
     
     if (!videosBucketExists) {
       createBucketsPromises.push(createBucket('videos', 30));
+    }
+
+    if (!groupsBucketExists) {
+      createBucketsPromises.push(createBucket('groups', 10));
     }
     
     // Execute all bucket creation operations

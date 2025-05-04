@@ -158,6 +158,195 @@ export type Database = {
         }
         Relationships: []
       }
+      group_join_requests: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_join_requests_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_message_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "group_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          article_id: string | null
+          content: string | null
+          created_at: string
+          group_id: string
+          id: string
+          image_url: string | null
+          is_deleted: boolean
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          content?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+          image_url?: string | null
+          is_deleted?: boolean
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          content?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+          image_url?: string | null
+          is_deleted?: boolean
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          member_count: number
+          name: string
+          owner_id: string
+          type: Database["public"]["Enums"]["group_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          member_count?: number
+          name: string
+          owner_id: string
+          type?: Database["public"]["Enums"]["group_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          member_count?: number
+          name?: string
+          owner_id?: string
+          type?: Database["public"]["Enums"]["group_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           article_id: string
@@ -319,8 +508,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      is_group_admin: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_owner: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      group_type: "public" | "private"
       sector_type:
         | "technology"
         | "marketing"
@@ -446,6 +648,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      group_type: ["public", "private"],
       sector_type: [
         "technology",
         "marketing",

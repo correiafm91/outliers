@@ -14,6 +14,8 @@ import NewArticlePage from "@/pages/NewArticlePage";
 import EditArticlePage from "@/pages/EditArticlePage";
 import SavedArticlesPage from "@/pages/SavedArticlesPage";
 import SearchPage from "@/pages/SearchPage";
+import GroupsPage from "@/pages/GroupsPage";
+import GroupDetailPage from "@/pages/GroupDetailPage";
 
 export default function App() {
   return (
@@ -30,6 +32,8 @@ export default function App() {
           <Route path="/saved-articles" element={<SavedArticlesPage />} />
           <Route path="/saved" element={<SavedArticlesPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/groups/:id" element={<GroupDetailPage />} />
           
           {/* Add the new routes for the cleaner URLs */}
           <Route path="/outliers/publicacao/:id" element={<BlogDetailPage />} />
