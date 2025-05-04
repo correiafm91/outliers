@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, checkBucketExists } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Image, Loader2, Video } from "lucide-react";
+import { Image, Loader2, Video, AlertCircle } from "lucide-react";
 
 type AspectRatioType = "16:9" | "4:3" | "1:1" | "3:2";
 
@@ -29,6 +30,11 @@ export default function EditArticlePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mediaType, setMediaType] = useState<"image" | "video" | "none">("none");
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("16:9");
+  const [bucketsChecked, setBucketsChecked] = useState(false);
+  const [bucketsAvailable, setBucketsAvailable] = useState({
+    images: false,
+    videos: false
+  });
 
   useEffect(() => {
     if (!user) {
@@ -36,8 +42,28 @@ export default function EditArticlePage() {
       return;
     }
 
+    checkStorageBuckets();
     fetchArticle();
   }, [id, user, navigate]);
+
+  const checkStorageBuckets = async () => {
+    const imagesExists = await checkBucketExists('images');
+    const videosExists = await checkBucketExists('videos');
+    
+    setBucketsAvailable({
+      images: imagesExists,
+      videos: videosExists
+    });
+    
+    setBucketsChecked(true);
+    
+    if (!imagesExists || !videosExists) {
+      toast.warning(
+        "Atenção: Alguns recursos de armazenamento podem não estar disponíveis no momento.",
+        { duration: 6000 }
+      );
+    }
+  };
 
   const fetchArticle = async () => {
     try {
@@ -80,6 +106,13 @@ export default function EditArticlePage() {
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("A imagem deve ter no máximo 5MB");
+        return;
+      }
+      
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setMediaType("image");
@@ -91,6 +124,13 @@ export default function EditArticlePage() {
   const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
+      
+      // Check file size (max 30MB)
+      if (file.size > 30 * 1024 * 1024) {
+        toast.error("O vídeo deve ter no máximo 30MB");
+        return;
+      }
+      
       setVideoFile(file);
       setVideoPreview(URL.createObjectURL(file));
       setMediaType("video");
@@ -119,6 +159,14 @@ export default function EditArticlePage() {
       let videoUrl = mediaType === "video" && !videoFile ? article.video_url : null;
       
       if (imageFile) {
+        if (!bucketsAvailable.images) {
+          // Re-check if the bucket exists
+          const exists = await checkBucketExists('images');
+          if (!exists) {
+            throw new Error("O sistema de armazenamento de imagens não está disponível no momento");
+          }
+        }
+        
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `articles/${user.id}/${fileName}`;
@@ -127,7 +175,12 @@ export default function EditArticlePage() {
           .from('images')
           .upload(filePath, imageFile);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
+            throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
+          }
+          throw uploadError;
+        }
 
         const { data: urlData } = supabase.storage
           .from('images')
@@ -137,6 +190,14 @@ export default function EditArticlePage() {
       }
       
       if (videoFile) {
+        if (!bucketsAvailable.videos) {
+          // Re-check if the bucket exists
+          const exists = await checkBucketExists('videos');
+          if (!exists) {
+            throw new Error("O sistema de armazenamento de vídeos não está disponível no momento");
+          }
+        }
+        
         const fileExt = videoFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `videos/${user.id}/${fileName}`;
@@ -145,7 +206,12 @@ export default function EditArticlePage() {
           .from('videos')
           .upload(filePath, videoFile);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
+            throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
+          }
+          throw uploadError;
+        }
 
         const { data: urlData } = supabase.storage
           .from('videos')
@@ -173,6 +239,7 @@ export default function EditArticlePage() {
       navigate(`/blog/${article.id}`);
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar publicação");
+      console.error("Error during article update:", error);
       setIsSubmitting(false);
     }
   };
@@ -199,6 +266,20 @@ export default function EditArticlePage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
+              {!bucketsChecked && (
+                <div className="p-3 bg-yellow-50 text-yellow-800 rounded-md flex items-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Verificando disponibilidade do sistema de armazenamento...</span>
+                </div>
+              )}
+              
+              {bucketsChecked && (!bucketsAvailable.images || !bucketsAvailable.videos) && (
+                <div className="p-3 bg-yellow-50 text-yellow-800 rounded-md flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Alguns recursos de armazenamento podem estar indisponíveis. Você ainda pode editar sua publicação sem alterar a mídia.</span>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
                 <Input
@@ -218,6 +299,7 @@ export default function EditArticlePage() {
                     variant={mediaType === "image" ? "default" : "outline"}
                     onClick={() => setMediaType("image")}
                     className="flex items-center gap-2"
+                    disabled={!bucketsAvailable.images && bucketsChecked && !article.image_url}
                   >
                     <Image className="h-4 w-4" />
                     Imagem
@@ -227,6 +309,7 @@ export default function EditArticlePage() {
                     variant={mediaType === "video" ? "default" : "outline"}
                     onClick={() => setMediaType("video")}
                     className="flex items-center gap-2"
+                    disabled={!bucketsAvailable.videos && bucketsChecked && !article.video_url}
                   >
                     <Video className="h-4 w-4" />
                     Vídeo
@@ -286,13 +369,15 @@ export default function EditArticlePage() {
                         </SelectContent>
                       </Select>
                       
-                      <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
+                      {imagePreview && (
+                        <div className="mt-4 overflow-hidden rounded-md border border-border" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

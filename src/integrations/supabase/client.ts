@@ -232,58 +232,50 @@ const ensureStorageBuckets = async () => {
     const imagesBucketExists = buckets.some(bucket => bucket.name === 'images');
     const videosBucketExists = buckets.some(bucket => bucket.name === 'videos');
     
+    // Store buckets creation promises
+    const createBucketsPromises = [];
+    
     if (!profilesBucketExists) {
-      const { error: createError } = await supabase.storage.createBucket('profiles', { 
-        public: true,
-        fileSizeLimit: 5 * 1024 * 1024 // 5MB limit
-      });
-      
-      if (createError) {
-        console.error("Error creating profiles bucket:", createError.message);
-      } else {
-        console.log("Created profiles storage bucket");
-        
-        // Set public policy for the bucket - remove this code that's causing TypeScript errors
-        // The old code that's causing problems:
-        // const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl('dummy.txt', 1);
-        // if (policyError && !policyError.message.includes('Object not found')) {
-        //   console.error("Error setting bucket policy:", policyError.message);
-        // }
-      }
+      createBucketsPromises.push(createBucket('profiles', 5));
     }
     
     if (!imagesBucketExists) {
-      const { error: createError } = await supabase.storage.createBucket('images', { 
-        public: true,
-        fileSizeLimit: 10 * 1024 * 1024 // 10MB limit
-      });
-      
-      if (createError) {
-        console.error("Error creating images bucket:", createError.message);
-      } else {
-        console.log("Created images storage bucket");
-      }
+      createBucketsPromises.push(createBucket('images', 10));
     }
     
     if (!videosBucketExists) {
-      const { error: createError } = await supabase.storage.createBucket('videos', { 
-        public: true,
-        fileSizeLimit: 100 * 1024 * 1024 // 100MB limit
-      });
-      
-      if (createError) {
-        console.error("Error creating videos bucket:", createError.message);
-      } else {
-        console.log("Created videos storage bucket");
-      }
+      createBucketsPromises.push(createBucket('videos', 30));
+    }
+    
+    // Execute all bucket creation operations
+    if (createBucketsPromises.length > 0) {
+      await Promise.allSettled(createBucketsPromises);
     }
   } catch (error) {
     console.error("Error setting up storage buckets:", error);
   }
 };
 
-// Call this function when the client is first imported
-ensureStorageBuckets();
+// Helper function to create a bucket with the specified size limit in MB
+const createBucket = async (name: string, sizeLimit: number) => {
+  try {
+    const { error } = await supabase.storage.createBucket(name, { 
+      public: true,
+      fileSizeLimit: sizeLimit * 1024 * 1024 // Convert MB to bytes
+    });
+    
+    if (error) {
+      console.error(`Error creating ${name} bucket:`, error.message);
+      return false;
+    }
+    
+    console.log(`Created ${name} storage bucket`);
+    return true;
+  } catch (error) {
+    console.error(`Error creating ${name} bucket:`, error);
+    return false;
+  }
+};
 
 // Function to ensure unique constraints on likes table
 const ensureUniqueConstraints = async () => {
@@ -300,6 +292,26 @@ const ensureUniqueConstraints = async () => {
     console.error("Error ensuring unique constraints:", e);
   }
 };
+
+// Function to check if a bucket exists and is accessible
+export const checkBucketExists = async (bucketName: string): Promise<boolean> => {
+  try {
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error(`Error checking if bucket ${bucketName} exists:`, error.message);
+      return false;
+    }
+    
+    return buckets.some(bucket => bucket.name === bucketName);
+  } catch (error) {
+    console.error(`Error checking if bucket ${bucketName} exists:`, error);
+    return false;
+  }
+};
+
+// Call this function when the client is first imported
+ensureStorageBuckets();
 
 // Call this function when the client is first imported
 ensureUniqueConstraints();
