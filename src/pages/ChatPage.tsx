@@ -77,7 +77,7 @@ export default function ChatPage() {
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      setProfile(data as Profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -89,28 +89,34 @@ export default function ChatPage() {
     try {
       setLoading(true);
 
-      // Fetch messages between current user and selected user
-      const { data, error } = await supabase
-        .from('direct_messages')
-        .select(`
-          *,
-          sender:profiles!sender_id(id, username, avatar_url),
-          receiver:profiles!receiver_id(id, username, avatar_url)
-        `)
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: true });
+      // Fetch messages using RPC function
+      const { data, error } = await supabase.rpc('get_conversation_messages', {
+        current_user_id: user.id,
+        other_user_id: userId
+      });
 
       if (error) throw error;
 
-      // Filter to only include messages between these two users
-      const filteredMessages = data.filter(
-        msg => 
-          (msg.sender_id === user.id && msg.receiver_id === userId) || 
-          (msg.sender_id === userId && msg.receiver_id === user.id)
-      );
+      // Get profile information for these messages
+      const senderIds = [...new Set(data.map((msg: any) => msg.sender_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', senderIds);
 
-      setMessages(filteredMessages);
+      const profileMap = new Map<string, Profile>();
+      profiles?.forEach(profile => {
+        profileMap.set(profile.id, profile as Profile);
+      });
+
+      // Enhance messages with profile information
+      const messagesWithProfiles = data.map((msg: any) => ({
+        ...msg,
+        sender: profileMap.get(msg.sender_id),
+        receiver: profileMap.get(msg.receiver_id)
+      })) as DirectMessage[];
+
+      setMessages(messagesWithProfiles);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {

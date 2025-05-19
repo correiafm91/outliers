@@ -65,18 +65,13 @@ export function ChatMessageInput({ receiverId, onMessageSent }: ChatMessageInput
         imageUrl = publicUrlData.publicUrl;
       }
       
-      const newMessage = {
-        sender_id: user.id,
-        receiver_id: receiverId,
-        content: message.trim() || null,
-        image_url: imageUrl,
-        is_edited: false,
-        is_deleted: false
-      };
-      
-      const { error: insertError } = await supabase
-        .from('direct_messages')
-        .insert(newMessage);
+      // Use RPC for inserting direct messages
+      const { error: insertError } = await supabase.rpc('insert_direct_message', {
+        sender_id_param: user.id,
+        receiver_id_param: receiverId,
+        content_param: message.trim() || null,
+        image_url_param: imageUrl
+      });
       
       if (insertError) throw insertError;
       

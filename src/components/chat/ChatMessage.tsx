@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Edit, Image, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 
 interface ChatMessageProps {
   message: DirectMessage;
@@ -39,14 +39,10 @@ export function ChatMessage({ message, isMyMessage, onImageClick }: ChatMessageP
     }
 
     try {
-      const { error } = await supabase
-        .from('direct_messages')
-        .update({
-          content: editedContent,
-          is_edited: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', message.id);
+      const { error } = await supabase.rpc('update_direct_message', {
+        message_id: message.id,
+        new_content: editedContent
+      });
 
       if (error) throw error;
       
@@ -60,10 +56,9 @@ export function ChatMessage({ message, isMyMessage, onImageClick }: ChatMessageP
 
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('direct_messages')
-        .delete()
-        .eq('id', message.id);
+      const { error } = await supabase.rpc('delete_direct_message', {
+        message_id: message.id
+      });
 
       if (error) throw error;
       
@@ -144,7 +139,6 @@ export function ChatMessage({ message, isMyMessage, onImageClick }: ChatMessageP
                   Cancelar
                 </Button>
                 <Button size="sm" onClick={handleEdit}>
-                  <Send className="mr-2 h-4 w-4" />
                   Salvar
                 </Button>
               </div>

@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ChatConversation } from '@/types/group';
+import { ChatConversation, DirectMessage } from '@/types/group';
+import { Profile } from '@/types/profile';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -32,74 +33,104 @@ export function ChatList() {
     try {
       setLoading(true);
 
-      // Get all sent and received messages
-      const { data: sentMessages, error: sentError } = await supabase
-        .from('direct_messages')
-        .select(`
-          id,
-          content,
-          sender_id,
-          receiver_id,
-          created_at,
-          receiver:profiles!receiver_id(id, username, avatar_url)
-        `)
-        .eq('sender_id', user.id)
-        .order('created_at', { ascending: false });
+      // Get sent messages with receiver profiles using raw SQL
+      const { data: sentMessages, error: sentError } = await supabase.rpc('get_sent_messages_with_receivers', {
+        user_id: user.id
+      }) as { data: any[], error: any };
 
-      const { data: receivedMessages, error: receivedError } = await supabase
-        .from('direct_messages')
-        .select(`
-          id, 
-          content,
-          sender_id,
-          receiver_id,
-          created_at,
-          sender:profiles!sender_id(id, username, avatar_url)
-        `)
-        .eq('receiver_id', user.id)
-        .order('created_at', { ascending: false });
+      // Get received messages with sender profiles using raw SQL
+      const { data: receivedMessages, error: receivedError } = await supabase.rpc('get_received_messages_with_senders', {
+        user_id: user.id
+      }) as { data: any[], error: any };
 
-      if (sentError || receivedError) throw sentError || receivedError;
+      if (sentError) console.error("Error fetching sent messages:", sentError);
+      if (receivedError) console.error("Error fetching received messages:", receivedError);
 
-      // Build unique conversations
+      // Fetch profiles for all users
+      const userIds = new Set<string>();
+      
+      if (sentMessages) {
+        sentMessages.forEach(msg => userIds.add(msg.receiver_id));
+      }
+      
+      if (receivedMessages) {
+        receivedMessages.forEach(msg => userIds.add(msg.sender_id));
+      }
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', Array.from(userIds));
+
+      const profileMap = new Map<string, Profile>();
+      profiles?.forEach(profile => {
+        profileMap.set(profile.id, profile as Profile);
+      });
+
+      // Build conversations from sent and received messages
       const conversationsMap = new Map<string, ChatConversation>();
 
-      // Add sent message conversations
-      sentMessages?.forEach(msg => {
-        const profile = msg.receiver;
-        if (!profile) return;
+      // Process sent messages
+      if (sentMessages) {
+        sentMessages.forEach((msg: any) => {
+          const profile = profileMap.get(msg.receiver_id);
+          if (!profile) return;
 
-        if (!conversationsMap.has(profile.id)) {
-          conversationsMap.set(profile.id, {
-            profile,
-            last_message: { ...msg, receiver: profile },
-            unread_count: 0
-          });
-        }
-      });
-
-      // Add received message conversations
-      receivedMessages?.forEach(msg => {
-        const profile = msg.sender;
-        if (!profile) return;
-
-        if (!conversationsMap.has(profile.id)) {
-          conversationsMap.set(profile.id, {
-            profile,
-            last_message: { ...msg, sender: profile },
-            unread_count: 0 // Would track unread count here
-          });
-        } else {
-          // Compare timestamps and update if newer
-          const existing = conversationsMap.get(profile.id);
-          if (existing && new Date(msg.created_at) > new Date(existing.last_message?.created_at || '')) {
+          if (!conversationsMap.has(profile.id)) {
             conversationsMap.set(profile.id, {
-              ...existing,
-              last_message: { ...msg, sender: profile }
+              profile,
+              last_message: {
+                ...msg,
+                receiver: profile
+              } as DirectMessage,
+              unread_count: 0
             });
+          } else {
+            // Check if this message is newer than what we have
+            const existing = conversationsMap.get(profile.id)!;
+            if (new Date(msg.created_at) > new Date(existing.last_message?.created_at || '')) {
+              conversationsMap.set(profile.id, {
+                ...existing,
+                last_message: {
+                  ...msg,
+                  receiver: profile
+                } as DirectMessage
+              });
+            }
           }
-        }
-      });
+        });
+      }
+
+      // Process received messages
+      if (receivedMessages) {
+        receivedMessages.forEach((msg: any) => {
+          const profile = profileMap.get(msg.sender_id);
+          if (!profile) return;
+
+          if (!conversationsMap.has(profile.id)) {
+            conversationsMap.set(profile.id, {
+              profile,
+              last_message: {
+                ...msg,
+                sender: profile
+              } as DirectMessage,
+              unread_count: 0 // Would track unread count here
+            });
+          } else {
+            // Compare timestamps and update if newer
+            const existing = conversationsMap.get(profile.id)!;
+            if (new Date(msg.created_at) > new Date(existing.last_message?.created_at || '')) {
+              conversationsMap.set(profile.id, {
+                ...existing,
+                last_message: {
+                  ...msg,
+                  sender: profile
+                } as DirectMessage
+              });
+            }
+          }
+        });
+      }
 
       // Convert map to array and sort by most recent
       const conversationList = Array.from(conversationsMap.values())
@@ -117,7 +148,7 @@ export function ChatList() {
     }
   };
 
-  const handleSelectUser = (selectedProfile: any) => {
+  const handleSelectUser = (selectedProfile: Profile) => {
     navigate(`/chat/${selectedProfile.id}`);
   };
 
