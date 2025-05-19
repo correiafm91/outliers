@@ -68,3 +68,24 @@ export interface GroupMessageReaction {
   created_at: string;
   profile?: Profile | null;
 }
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  image_url: string | null;
+  video_url: string | null;
+  created_at: string;
+  updated_at: string;
+  is_edited: boolean;
+  is_deleted: boolean;
+  sender?: Profile | null;
+  receiver?: Profile | null;
+}
+
+export interface ChatConversation {
+  profile: Profile;
+  last_message: DirectMessage | null;
+  unread_count: number;
+}

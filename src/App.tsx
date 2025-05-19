@@ -16,6 +16,7 @@ import SavedArticlesPage from "@/pages/SavedArticlesPage";
 import SearchPage from "@/pages/SearchPage";
 import GroupsPage from "@/pages/GroupsPage";
 import GroupDetailPage from "@/pages/GroupDetailPage";
+import ChatPage from "@/pages/ChatPage";
 
 export default function App() {
   return (
@@ -34,6 +35,8 @@ export default function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/groups/:id" element={<GroupDetailPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:userId" element={<ChatPage />} />
           
           {/* Add the new routes for the cleaner URLs */}
           <Route path="/outliers/publicacao/:id" element={<BlogDetailPage />} />
