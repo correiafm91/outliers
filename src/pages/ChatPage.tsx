@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Image, Loader2 } from 'lucide-react';
-import { useMobileScreen } from "@/hooks/use-mobile";
 
 export default function ChatPage() {
   const { userId } = useParams<{ userId?: string }>();
@@ -23,8 +22,23 @@ export default function ChatPage() {
   const [imageDialog, setImageDialog] = useState<string | null>(null);
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMobileScreen();
+  
+  // Media query for mobile screens
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showList, setShowList] = useState(!userId || !isMobile);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setShowList(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (isMobile) {
@@ -96,18 +110,30 @@ export default function ChatPage() {
       });
 
       if (error) throw error;
+      
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid data format from get_conversation_messages');
+        setMessages([]);
+        return;
+      }
 
       // Get profile information for these messages
-      const senderIds = [...new Set(data.map((msg: any) => msg.sender_id))];
+      const userIds = [...new Set([
+        ...data.map((msg: DirectMessage) => msg.sender_id),
+        ...data.map((msg: DirectMessage) => msg.receiver_id)
+      ])];
+
       const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', senderIds);
+        .in('id', userIds);
 
       const profileMap = new Map<string, Profile>();
-      profiles?.forEach(profile => {
-        profileMap.set(profile.id, profile as Profile);
-      });
+      if (profiles) {
+        profiles.forEach(profile => {
+          profileMap.set(profile.id, profile as Profile);
+        });
+      }
 
       // Enhance messages with profile information
       const messagesWithProfiles = data.map((msg: any) => ({

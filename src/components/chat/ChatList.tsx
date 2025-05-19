@@ -33,15 +33,17 @@ export function ChatList() {
     try {
       setLoading(true);
 
-      // Get sent messages with receiver profiles using raw SQL
-      const { data: sentMessages, error: sentError } = await supabase.rpc('get_sent_messages_with_receivers', {
-        user_id: user.id
-      }) as { data: any[], error: any };
+      // Get sent messages
+      const { data: sentMessages, error: sentError } = await supabase
+        .rpc('get_sent_messages_with_receivers', {
+          user_id: user.id
+        });
 
-      // Get received messages with sender profiles using raw SQL
-      const { data: receivedMessages, error: receivedError } = await supabase.rpc('get_received_messages_with_senders', {
-        user_id: user.id
-      }) as { data: any[], error: any };
+      // Get received messages
+      const { data: receivedMessages, error: receivedError } = await supabase
+        .rpc('get_received_messages_with_senders', {
+          user_id: user.id
+        });
 
       if (sentError) console.error("Error fetching sent messages:", sentError);
       if (receivedError) console.error("Error fetching received messages:", receivedError);
@@ -49,12 +51,12 @@ export function ChatList() {
       // Fetch profiles for all users
       const userIds = new Set<string>();
       
-      if (sentMessages) {
-        sentMessages.forEach(msg => userIds.add(msg.receiver_id));
+      if (sentMessages && Array.isArray(sentMessages)) {
+        sentMessages.forEach((msg: any) => userIds.add(msg.receiver_id));
       }
       
-      if (receivedMessages) {
-        receivedMessages.forEach(msg => userIds.add(msg.sender_id));
+      if (receivedMessages && Array.isArray(receivedMessages)) {
+        receivedMessages.forEach((msg: any) => userIds.add(msg.sender_id));
       }
 
       const { data: profiles } = await supabase
@@ -63,15 +65,17 @@ export function ChatList() {
         .in('id', Array.from(userIds));
 
       const profileMap = new Map<string, Profile>();
-      profiles?.forEach(profile => {
-        profileMap.set(profile.id, profile as Profile);
-      });
+      if (profiles) {
+        profiles.forEach(profile => {
+          profileMap.set(profile.id, profile as Profile);
+        });
+      }
 
       // Build conversations from sent and received messages
       const conversationsMap = new Map<string, ChatConversation>();
 
       // Process sent messages
-      if (sentMessages) {
+      if (sentMessages && Array.isArray(sentMessages)) {
         sentMessages.forEach((msg: any) => {
           const profile = profileMap.get(msg.receiver_id);
           if (!profile) return;
@@ -102,7 +106,7 @@ export function ChatList() {
       }
 
       // Process received messages
-      if (receivedMessages) {
+      if (receivedMessages && Array.isArray(receivedMessages)) {
         receivedMessages.forEach((msg: any) => {
           const profile = profileMap.get(msg.sender_id);
           if (!profile) return;

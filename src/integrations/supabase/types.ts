@@ -508,6 +508,64 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_direct_message: {
+        Args: { message_id: string }
+        Returns: boolean
+      }
+      get_conversation_messages: {
+        Args: { current_user_id: string; other_user_id: string }
+        Returns: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          image_url: string
+          video_url: string
+          created_at: string
+          updated_at: string
+          is_edited: boolean
+          is_deleted: boolean
+        }[]
+      }
+      get_received_messages_with_senders: {
+        Args: { user_id: string }
+        Returns: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          image_url: string
+          video_url: string
+          created_at: string
+          updated_at: string
+          is_edited: boolean
+          is_deleted: boolean
+        }[]
+      }
+      get_sent_messages_with_receivers: {
+        Args: { user_id: string }
+        Returns: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          image_url: string
+          video_url: string
+          created_at: string
+          updated_at: string
+          is_edited: boolean
+          is_deleted: boolean
+        }[]
+      }
+      insert_direct_message: {
+        Args: {
+          sender_id_param: string
+          receiver_id_param: string
+          content_param: string
+          image_url_param?: string
+        }
+        Returns: string
+      }
       is_group_admin: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
@@ -518,6 +576,10 @@ export type Database = {
       }
       is_group_owner: {
         Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      update_direct_message: {
+        Args: { message_id: string; new_content: string }
         Returns: boolean
       }
     }
