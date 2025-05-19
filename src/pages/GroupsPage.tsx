@@ -35,7 +35,7 @@ export default function GroupsPage() {
       
       let query = supabase.from('groups').select(`
         *,
-        owner:owner_id(id, username, avatar_url)
+        owner:profiles!owner_id(id, username, avatar_url)
       `);
       
       if (filter === "my") {
@@ -68,7 +68,7 @@ export default function GroupsPage() {
       if (error) throw error;
       
       if (data) {
-        let enhancedGroups = data as Group[];
+        let enhancedGroups = data as unknown as Group[];
         
         if (user) {
           // Check membership for each group
@@ -84,7 +84,7 @@ export default function GroupsPage() {
             enhancedGroups = enhancedGroups.map(group => ({
               ...group,
               is_member: membershipMap.has(group.id),
-              role: membershipMap.get(group.id) as any
+              role: membershipMap.get(group.id) as MemberRole | undefined
             }));
           }
           

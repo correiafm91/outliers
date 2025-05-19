@@ -82,7 +82,7 @@ export default function GroupDetailPage() {
         .from('groups')
         .select(`
           *,
-          owner:owner_id(id, username, avatar_url)
+          owner:profiles!owner_id(id, username, avatar_url)
         `)
         .eq('id', id)
         .single();
@@ -108,8 +108,8 @@ export default function GroupDetailPage() {
           setGroup({
             ...groupData,
             is_member: true,
-            role: memberData.role
-          });
+            role: memberData.role as MemberRole
+          } as Group);
           
           // Fetch members
           fetchMembers();
@@ -120,7 +120,7 @@ export default function GroupDetailPage() {
           setGroup({
             ...groupData,
             is_member: false
-          });
+          } as Group);
           
           // Not a member, redirect back to groups page
           toast.error('Você não é membro deste grupo');
@@ -148,7 +148,7 @@ export default function GroupDetailPage() {
         .from('group_members')
         .select(`
           *,
-          profile:user_id(id, username, avatar_url)
+          profile:profiles!user_id(id, username, avatar_url)
         `)
         .eq('group_id', id)
         .order('role', { ascending: false });
@@ -156,7 +156,7 @@ export default function GroupDetailPage() {
       if (error) throw error;
       
       if (data) {
-        setMembers(data as GroupMember[]);
+        setMembers(data as unknown as GroupMember[]);
       }
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -171,8 +171,8 @@ export default function GroupDetailPage() {
         .from('group_messages')
         .select(`
           *,
-          sender:user_id(id, username, avatar_url),
-          shared_article:article_id(id, title, image_url)
+          sender:profiles!user_id(id, username, avatar_url),
+          shared_article:articles!article_id(id, title, image_url)
         `)
         .eq('group_id', id)
         .order('created_at', { ascending: true });
@@ -180,7 +180,7 @@ export default function GroupDetailPage() {
       if (error) throw error;
       
       if (data) {
-        setMessages(data as GroupMessage[]);
+        setMessages(data as unknown as GroupMessage[]);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -194,8 +194,8 @@ export default function GroupDetailPage() {
         .from('group_messages')
         .select(`
           *,
-          sender:user_id(id, username, avatar_url),
-          shared_article:article_id(id, title, image_url)
+          sender:profiles!user_id(id, username, avatar_url),
+          shared_article:articles!article_id(id, title, image_url)
         `)
         .eq('id', newMessage.id)
         .single();
@@ -203,7 +203,7 @@ export default function GroupDetailPage() {
       if (error) throw error;
       
       if (data) {
-        setMessages((prev) => [...prev, data as GroupMessage]);
+        setMessages((prev) => [...prev, data as unknown as GroupMessage]);
       }
     } catch (error) {
       console.error('Error processing new message:', error);

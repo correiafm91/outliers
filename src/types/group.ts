@@ -15,7 +15,7 @@ export interface Group {
   updated_at: string;
   image_url: string | null;
   member_count: number;
-  owner?: Profile;
+  owner?: Profile | null;
   is_member?: boolean;
   role?: MemberRole;
   has_pending_request?: boolean;
@@ -27,7 +27,7 @@ export interface GroupMember {
   user_id: string;
   role: MemberRole;
   joined_at: string;
-  profile?: Profile;
+  profile?: Profile | null;
 }
 
 export interface JoinRequest {
@@ -37,7 +37,7 @@ export interface JoinRequest {
   status: JoinRequestStatus;
   created_at: string;
   updated_at: string;
-  profile?: Profile;
+  profile?: Profile | null;
 }
 
 export interface GroupMessage {
@@ -51,13 +51,13 @@ export interface GroupMessage {
   created_at: string;
   updated_at: string;
   is_deleted: boolean;
-  sender?: Profile;
+  sender?: Profile | null;
   reactions?: GroupMessageReaction[];
   shared_article?: {
     id: string;
     title: string;
     image_url: string | null;
-  };
+  } | null;
 }
 
 export interface GroupMessageReaction {
@@ -66,5 +66,5 @@ export interface GroupMessageReaction {
   user_id: string;
   type: string;
   created_at: string;
-  profile?: Profile;
+  profile?: Profile | null;
 }

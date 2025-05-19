@@ -33,7 +33,7 @@ export function GroupJoinRequests({
         .from('group_join_requests')
         .select(`
           *,
-          profile:user_id(id, username, avatar_url)
+          profile:profiles!user_id(id, username, avatar_url)
         `)
         .eq('group_id', groupId)
         .eq('status', 'pending')
@@ -42,7 +42,7 @@ export function GroupJoinRequests({
       if (error) throw error;
       
       if (data) {
-        setRequests(data as JoinRequest[]);
+        setRequests(data as unknown as JoinRequest[]);
       }
     } catch (error) {
       console.error('Error fetching join requests:', error);
@@ -135,7 +135,7 @@ export function GroupJoinRequests({
             <Avatar>
               <AvatarImage src={request.profile?.avatar_url || ''} alt={request.profile?.username || ''} />
               <AvatarFallback>
-                {request.profile?.username.substring(0, 2).toUpperCase() || 'U'}
+                {request.profile?.username?.substring(0, 2).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             
