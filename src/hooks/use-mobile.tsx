@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 
-export function useMobileScreen() {
+export function useMobile() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -20,4 +20,12 @@ export function useMobileScreen() {
   }, []);
 
   return isMobile;
+}
+
+// For sidebar compatibility
+export const useIsMobile = useMobile;
+
+// Legacy function name maintained for backward compatibility
+export function useMobileScreen() {
+  return useMobile();
 }

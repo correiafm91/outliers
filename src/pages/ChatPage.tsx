@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Image, Loader2 } from 'lucide-react';
+import { useMobile } from '@/hooks/use-mobile';
 
 export default function ChatPage() {
   const { userId } = useParams<{ userId?: string }>();
@@ -24,21 +24,16 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Media query for mobile screens
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const isMobile = useMobile();
   const [showList, setShowList] = useState(!userId || !isMobile);
 
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setShowList(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    if (!isMobile) {
+      setShowList(true);
+    } else {
+      setShowList(!userId);
+    }
+  }, [userId, isMobile]);
 
   useEffect(() => {
     if (isMobile) {
@@ -162,10 +157,10 @@ export default function ChatPage() {
 
   return (
     <div className="container mx-auto max-w-6xl p-0">
-      <div className="flex h-[calc(100vh-4rem)] border rounded-md overflow-hidden">
+      <div className="flex h-[calc(100vh-4rem)] border-2 rounded-md overflow-hidden glass-card animate-fade-in">
         {/* Chat List */}
         {showList && (
-          <div className={`${isMobile ? 'w-full' : 'w-80'} border-r bg-card`}>
+          <div className={`${isMobile ? 'w-full' : 'w-80'} border-r bg-card/90 backdrop-blur-sm`}>
             <ChatList />
           </div>
         )}
@@ -174,12 +169,12 @@ export default function ChatPage() {
         {showUserChat ? (
           <div className="flex-1 flex flex-col">
             {/* Header */}
-            <div className="p-3 border-b flex items-center">
+            <div className="p-3 border-b flex items-center bg-card/80 backdrop-blur-sm">
               {isMobile && (
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="mr-2" 
+                  className="mr-2 hover:bg-primary/10" 
                   onClick={handleBack}
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -188,7 +183,7 @@ export default function ChatPage() {
               
               {profile ? (
                 <div className="flex items-center">
-                  <Avatar className="h-9 w-9 mr-3">
+                  <Avatar className="h-9 w-9 mr-3 border-2 border-primary/20">
                     <AvatarImage src={profile.avatar_url || ''} alt={profile.username} />
                     <AvatarFallback>
                       {profile.username.substring(0, 2).toUpperCase()}
@@ -218,7 +213,7 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
                 <div className="flex justify-center items-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : messages.length > 0 ? (
                 <div>
@@ -234,7 +229,7 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full">
-                  <Image className="h-12 w-12 text-muted-foreground mb-3" />
+                  <Image className="h-12 w-12 text-primary/50 mb-3" />
                   <h3 className="font-medium">Nenhuma mensagem</h3>
                   <p className="text-sm text-muted-foreground">
                     Comece a conversar agora
@@ -250,11 +245,11 @@ export default function ChatPage() {
             />
           </div>
         ) : !showList && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <Image className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <div className="flex-1 flex items-center justify-center bg-card/50">
+            <div className="text-center animate-scale-in">
+              <Image className="h-16 w-16 text-primary/50 mx-auto mb-4" />
               <h2 className="text-xl font-medium">Selecione uma conversa</h2>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 max-w-md px-4">
                 Escolha uma conversa existente ou inicie uma nova
               </p>
             </div>
@@ -269,7 +264,7 @@ export default function ChatPage() {
             <img
               src={imageDialog}
               alt="Full size"
-              className="w-full h-auto object-contain"
+              className="w-full h-auto object-contain rounded-md"
             />
           )}
         </DialogContent>

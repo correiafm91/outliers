@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, Plus, Settings, LogOut, SendHorizonal, Image, Video, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Group, GroupMember, GroupMessage } from "@/types/group";
+import { Group, GroupMember, GroupMessage, MemberRole } from "@/types/group";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +19,7 @@ import { GroupSettings } from "@/components/groups/GroupSettings";
 import { GroupMessagesList } from "@/components/groups/GroupMessagesList";
 import { GroupMediaUpload } from "@/components/groups/GroupMediaUpload";
 import { ShareArticleDialog } from "@/components/groups/ShareArticleDialog";
+import { useMobile } from "@/hooks/use-mobile";
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +35,7 @@ export default function GroupDetailPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMobile();
 
   useEffect(() => {
     if (!id) return;
@@ -109,7 +110,7 @@ export default function GroupDetailPage() {
             ...groupData,
             is_member: true,
             role: memberData.role as MemberRole
-          } as Group);
+          });
           
           // Fetch members
           fetchMembers();
@@ -120,7 +121,7 @@ export default function GroupDetailPage() {
           setGroup({
             ...groupData,
             is_member: false
-          } as Group);
+          });
           
           // Not a member, redirect back to groups page
           toast.error('Você não é membro deste grupo');
@@ -285,31 +286,31 @@ export default function GroupDetailPage() {
       
       <main className="flex-1 container max-w-7xl mx-auto px-4 py-6">
         {/* Group header */}
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6 animate-fade-in">
           <div className="flex items-center gap-4">
-            {group.image_url ? (
-              <Avatar className="h-16 w-16">
+            {group?.image_url ? (
+              <Avatar className="h-16 w-16 border-2 border-primary/20">
                 <AvatarImage src={group.image_url} alt={group.name} />
                 <AvatarFallback>{group.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
             ) : (
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                 <Users className="h-8 w-8 text-primary" />
               </div>
             )}
             
             <div>
-              <h1 className="text-2xl font-bold">{group.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{group?.name}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{group.member_count} membros</span>
+                <span>{group?.member_count} membros</span>
               </div>
             </div>
           </div>
           
           <div className="flex gap-2 self-end md:self-auto">
-            {isAdmin && (
-              <Button variant="outline" onClick={() => setActiveTab('settings')}>
+            {group?.role && (group.role === 'admin' || group.role === 'owner') && (
+              <Button variant="outline" onClick={() => setActiveTab('settings')} className="hover:bg-accent hover:text-accent-foreground">
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
               </Button>
@@ -321,7 +322,7 @@ export default function GroupDetailPage() {
           </div>
         </div>
         
-        {group.description && (
+        {group?.description && (
           <p className="mb-6 text-muted-foreground">{group.description}</p>
         )}
         
@@ -329,14 +330,16 @@ export default function GroupDetailPage() {
         
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-3 md:w-[400px]">
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="members">Membros ({group.member_count})</TabsTrigger>
-            {isAdmin && <TabsTrigger value="settings">Configurações</TabsTrigger>}
+          <TabsList className="grid grid-cols-3 md:w-[400px] border-2 border-accent">
+            <TabsTrigger value="chat" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Chat</TabsTrigger>
+            <TabsTrigger value="members" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Membros ({group?.member_count})</TabsTrigger>
+            {group?.role && (group.role === 'admin' || group.role === 'owner') && (
+              <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Configurações</TabsTrigger>
+            )}
           </TabsList>
           
-          <TabsContent value="chat" className="space-y-4">
-            <div className="border rounded-lg h-[60vh] flex flex-col">
+          <TabsContent value="chat" className="space-y-4 animate-fade-in">
+            <div className="border rounded-lg h-[60vh] flex flex-col bg-card shadow-lg">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center">
@@ -355,13 +358,13 @@ export default function GroupDetailPage() {
                 <div ref={messagesEndRef} />
               </div>
               
-              <div className="border-t p-4">
+              <div className="border-t p-4 bg-card/80 backdrop-blur-sm">
                 <div className="flex space-x-2">
                   <Textarea
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Escreva sua mensagem..."
-                    className="min-h-[60px] resize-none"
+                    className="min-h-[60px] resize-none bg-background/50"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -375,6 +378,7 @@ export default function GroupDetailPage() {
                       variant="ghost"
                       onClick={() => setUploadType("image")}
                       title="Enviar imagem"
+                      className="hover:bg-primary/10"
                     >
                       <Image className="h-5 w-5" />
                     </Button>
@@ -383,6 +387,7 @@ export default function GroupDetailPage() {
                       variant="ghost"
                       onClick={() => setUploadType("video")}
                       title="Enviar vídeo"
+                      className="hover:bg-primary/10"
                     >
                       <Video className="h-5 w-5" />
                     </Button>
@@ -391,6 +396,7 @@ export default function GroupDetailPage() {
                       variant="ghost"
                       onClick={() => setShowShareArticle(true)}
                       title="Compartilhar publicação"
+                      className="hover:bg-primary/10"
                     >
                       <Share2 className="h-5 w-5" />
                     </Button>
@@ -399,6 +405,7 @@ export default function GroupDetailPage() {
                     size="icon" 
                     onClick={handleSendMessage}
                     disabled={!messageText.trim() || sendingMessage}
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {sendingMessage ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -9,12 +8,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Users, Search, Plus, Filter, Loader2, Lock, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Group } from "@/types/group";
+import { Group, MemberRole } from "@/types/group";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateGroupDialog } from "@/components/groups/CreateGroupDialog";
 import { Badge } from "@/components/ui/badge";
+import { useMobile } from "@/hooks/use-mobile";
 
 export default function GroupsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +24,7 @@ export default function GroupsPage() {
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useMobile();
 
   useEffect(() => {
     fetchGroups();
@@ -165,16 +166,16 @@ export default function GroupsPage() {
       <Navbar />
       
       <main className="flex-1 container max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold">Grupos</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">Grupos</h1>
             <p className="text-muted-foreground mt-2">
               Explore e participe de grupos para se conectar com outros usuários
             </p>
           </div>
           
           <Button 
-            className="mt-4 md:mt-0"
+            className="mt-4 md:mt-0 bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105"
             onClick={() => setOpenCreateDialog(true)}
           >
             <Plus className="mr-2 h-4 w-4" /> Criar Grupo
@@ -182,20 +183,20 @@ export default function GroupsPage() {
         </div>
         
         {/* Filters and search */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in delay-100">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Buscar grupos..."
-              className="pl-10"
+              className="pl-10 bg-background/50 backdrop-blur-sm border-2 focus-visible:ring-primary"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           
           <Select defaultValue="all" value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] border-2 focus:ring-primary">
               <SelectValue placeholder="Filtrar" />
             </SelectTrigger>
             <SelectContent>
@@ -208,24 +209,28 @@ export default function GroupsPage() {
         {/* Groups list */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : filteredGroups.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGroups.map((group) => (
-              <Card key={group.id} className="h-full flex flex-col hover:shadow-md transition-shadow">
+            {filteredGroups.map((group, index) => (
+              <Card 
+                key={group.id} 
+                className={`h-full flex flex-col hover:shadow-lg transition-all duration-300 bg-card/90 backdrop-blur-sm border-2 border-muted animate-fade-in`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-xl truncate">{group.name}</CardTitle>
                       <div className="flex items-center gap-2 mt-1.5">
                         {group.type === 'public' ? (
-                          <Badge variant="outline" className="flex items-center gap-1">
+                          <Badge variant="outline" className="flex items-center gap-1 bg-primary/5">
                             <Globe className="h-3.5 w-3.5" /> 
                             Público
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="flex items-center gap-1">
+                          <Badge variant="outline" className="flex items-center gap-1 bg-secondary/10">
                             <Lock className="h-3.5 w-3.5" />
                             Privado
                           </Badge>
@@ -237,12 +242,12 @@ export default function GroupsPage() {
                       </div>
                     </div>
                     {group.image_url ? (
-                      <Avatar className="h-12 w-12">
+                      <Avatar className="h-12 w-12 border-2 border-primary/20">
                         <AvatarImage src={group.image_url} alt={group.name} />
                         <AvatarFallback>{group.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                         <Users className="h-6 w-6 text-primary" />
                       </div>
                     )}
@@ -268,19 +273,19 @@ export default function GroupsPage() {
                   {group.is_member ? (
                     <Button 
                       variant="default" 
-                      className="w-full"
+                      className="w-full bg-primary hover:bg-primary/90 transition-all duration-300"
                       onClick={() => navigate(`/groups/${group.id}`)}
                     >
                       Entrar no Grupo
                     </Button>
                   ) : group.has_pending_request ? (
-                    <Button variant="outline" disabled className="w-full">
+                    <Button variant="outline" disabled className="w-full border-2">
                       Solicitação enviada
                     </Button>
                   ) : (
                     <Button 
                       variant="outline" 
-                      className="w-full"
+                      className="w-full border-2 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
                       onClick={() => handleJoinGroup(group)}
                     >
                       {group.type === 'public' ? 'Entrar' : 'Solicitar Entrada'}
@@ -291,7 +296,7 @@ export default function GroupsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 border rounded-lg">
+          <div className="text-center py-12 border-2 rounded-lg bg-card/40 backdrop-blur-sm animate-fade-in">
             <Users className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">Nenhum grupo encontrado</h3>
             <p className="text-muted-foreground mt-2">
@@ -302,7 +307,7 @@ export default function GroupsPage() {
             {filter === "my" && (
               <Button 
                 variant="outline" 
-                className="mt-4"
+                className="mt-4 border-2 hover:bg-primary/10"
                 onClick={() => setFilter("all")}
               >
                 Ver todos os grupos

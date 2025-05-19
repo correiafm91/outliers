@@ -14,7 +14,7 @@
     --popover: 0 0% 9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 98%;
+    --primary: 254 77% 73%;
     --primary-foreground: 0 0% 9%;
 
     --secondary: 0 0% 15%;
@@ -31,7 +31,7 @@
 
     --border: 0 0% 20%;
     --input: 0 0% 15%;
-    --ring: 0 0% 83.9%;
+    --ring: 254 77% 73%;
 
     --radius: 0.5rem;
   }
@@ -48,6 +48,11 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    background-image: radial-gradient(
+      circle at center,
+      rgba(var(--primary), 0.05) 0%,
+      transparent 80%
+    );
   }
 
   /* Custom scrollbar styling */
@@ -105,6 +110,14 @@
     @apply text-lg md:text-xl font-semibold;
   }
 
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border-2 border-muted/50 rounded-lg shadow-lg;
+  }
+
+  .glass-input {
+    @apply bg-background/50 backdrop-blur-sm border-2 focus-visible:ring-primary;
+  }
+
   /* Animation Delays */
   .delay-100 {
     animation-delay: 100ms;
@@ -127,4 +140,42 @@
 .animate-once {
   animation-fill-mode: forwards;
   opacity: 0;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hover-scale {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+.shadow-glow {
+  box-shadow: 0 0 15px rgba(var(--primary), 0.3);
 }
