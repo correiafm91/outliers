@@ -35,6 +35,7 @@ export default function NewArticlePage() {
     images: false,
     videos: false
   });
+  const [sector, setSector] = useState("other");
 
   useEffect(() => {
     // Check if user is logged in and is admin
@@ -201,7 +202,7 @@ export default function NewArticlePage() {
           author_id: user.id,
           image_url: imageUrl,
           video_url: videoUrl,
-          sector: "blog",
+          sector: sector, // Using a valid sector value from enum
           aspect_ratio: mediaType === "image" ? aspectRatio : null
         })
         .select()
@@ -255,6 +256,24 @@ export default function NewArticlePage() {
                   placeholder="Digite o título do artigo"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sector">Categoria</Label>
+                <Select value={sector} onValueChange={setSector}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technology">Tecnologia</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="education">Educação</SelectItem>
+                    <SelectItem value="finance">Finanças</SelectItem>
+                    <SelectItem value="health">Saúde</SelectItem>
+                    <SelectItem value="entertainment">Entretenimento</SelectItem>
+                    <SelectItem value="other">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

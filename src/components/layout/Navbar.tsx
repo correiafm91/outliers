@@ -79,7 +79,7 @@ export function Navbar() {
         <NavigationMenu className="hidden md:flex ml-6">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link to="/" legacyBehavior passHref>
+              <Link to="/">
                 <NavigationMenuLink 
                   className={navigationMenuTriggerStyle() + (location.pathname === "/" ? " bg-accent" : "")}
                 >
@@ -90,7 +90,7 @@ export function Navbar() {
             </NavigationMenuItem>
             
             <NavigationMenuItem>
-              <Link to="/blog" legacyBehavior passHref>
+              <Link to="/blog">
                 <NavigationMenuLink 
                   className={navigationMenuTriggerStyle() + (location.pathname.startsWith("/blog") ? " bg-accent" : "")}
                 >
@@ -101,7 +101,7 @@ export function Navbar() {
             </NavigationMenuItem>
             
             <NavigationMenuItem>
-              <Link to="/search" legacyBehavior passHref>
+              <Link to="/search">
                 <NavigationMenuLink 
                   className={navigationMenuTriggerStyle() + (location.pathname === "/search" ? " bg-accent" : "")}
                 >
@@ -114,7 +114,7 @@ export function Navbar() {
             {/* Admin link, only visible for admins */}
             {isAdmin && (
               <NavigationMenuItem>
-                <Link to="/admin" legacyBehavior passHref>
+                <Link to="/admin">
                   <NavigationMenuLink 
                     className={navigationMenuTriggerStyle() + (location.pathname.startsWith("/admin") ? " bg-accent text-accent-foreground" : "")}
                   >

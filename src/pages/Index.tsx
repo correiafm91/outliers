@@ -1,4 +1,3 @@
-
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -9,8 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Article, Profile } from "@/types/profile";
 import { Loader2 } from "lucide-react";
 import { BlogCard } from "@/components/blog/BlogCard";
-import { useAdmin } from "@/hooks/use-admin";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useAdmin } from "@/hooks/use-admin";
 
 export default function Index() {
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
