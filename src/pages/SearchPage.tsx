@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 
@@ -25,21 +24,11 @@ interface Article {
   };
 }
 
-interface Profile {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-  sector: string;
-  bio?: string;
-}
-
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [articles, setArticles] = useState<Article[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [activeTab, setActiveTab] = useState("articles");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -56,7 +45,7 @@ export default function SearchPage() {
     setIsLoading(true);
     
     try {
-      // Search articles
+      // Search only articles
       const { data: articlesData, error: articlesError } = await supabase
         .from("articles")
         .select(`
@@ -70,15 +59,6 @@ export default function SearchPage() {
 
       if (articlesError) throw articlesError;
       setArticles(articlesData || []);
-
-      // Search profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .ilike("username", `%${searchQuery}%`);
-
-      if (profilesError) throw profilesError;
-      setProfiles(profilesData || []);
     } catch (error) {
       console.error("Erro na pesquisa:", error);
     } finally {
@@ -117,7 +97,7 @@ export default function SearchPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Pesquise por artigos, usuários..."
+              placeholder="Pesquise por publicações..."
               className="flex-1"
             />
             <Button type="submit" disabled={isLoading}>
@@ -125,112 +105,46 @@ export default function SearchPage() {
             </Button>
           </form>
 
-          {(articles.length > 0 || profiles.length > 0) && (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="articles">
-                  Artigos ({articles.length})
-                </TabsTrigger>
-                <TabsTrigger value="profiles">
-                  Usuários ({profiles.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="articles">
-                {articles.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Nenhum artigo encontrado</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {articles.map((article) => (
-                      <Card key={article.id} className="overflow-hidden">
-                        <div className="flex flex-col md:flex-row">
-                          {article.image_url && (
-                            <div className="md:w-1/4 aspect-video md:aspect-square overflow-hidden">
-                              <img 
-                                src={article.image_url} 
-                                alt={article.title}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className={`flex-1 ${article.image_url ? 'md:w-3/4' : 'w-full'}`}>
-                            <CardHeader>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={article.profiles?.avatar_url || ""} />
-                                  <AvatarFallback>
-                                    {article.profiles?.username.slice(0, 2).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium cursor-pointer" onClick={() => navigate(`/profile/${article.author_id}`)}>
-                                  {article.profiles?.username}
-                                </span>
-                              </div>
-                              <CardTitle className="line-clamp-2">{article.title}</CardTitle>
-                              <CardDescription className="flex items-center gap-2">
-                                <span>{new Date(article.created_at).toLocaleDateString('pt-BR')}</span>
-                                <Badge variant="outline">
-                                  {sectorTranslations[article.sector] || article.sector}
-                                </Badge>
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="line-clamp-3">{article.content}</p>
-                            </CardContent>
-                            <CardFooter>
-                              <Button variant="outline" onClick={() => navigate(`/blog/${article.id}`)}>
-                                Ler mais
-                              </Button>
-                            </CardFooter>
-                          </div>
+          {articles.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Publicações ({articles.length})</h2>
+              <div className="space-y-6">
+                {articles.map((article) => (
+                  <Card key={article.id} className="overflow-hidden">
+                    <div className="flex flex-col md:flex-row">
+                      {article.image_url && (
+                        <div className="md:w-1/4 aspect-video md:aspect-square overflow-hidden">
+                          <img 
+                            src={article.image_url} 
+                            alt={article.title}
+                            className="h-full w-full object-cover"
+                          />
                         </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="profiles">
-                {profiles.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Nenhum usuário encontrado</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {profiles.map((profile) => (
-                      <Card key={profile.id} className="overflow-hidden">
-                        <CardHeader className="text-center pb-2">
-                          <Avatar className="h-20 w-20 mx-auto mb-4">
-                            <AvatarImage src={profile.avatar_url || ""} />
-                            <AvatarFallback className="text-xl">
-                              {profile.username.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <CardTitle className="text-lg">{profile.username}</CardTitle>
-                          <CardDescription>
-                            <Badge variant="outline" className="mt-1">
-                              {sectorTranslations[profile.sector] || profile.sector}
+                      )}
+                      <div className={`flex-1 ${article.image_url ? 'md:w-3/4' : 'w-full'}`}>
+                        <CardHeader>
+                          <CardTitle className="line-clamp-2">{article.title}</CardTitle>
+                          <CardDescription className="flex items-center gap-2">
+                            <span>{new Date(article.created_at).toLocaleDateString('pt-BR')}</span>
+                            <Badge variant="outline">
+                              {sectorTranslations[article.sector] || article.sector}
                             </Badge>
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="text-center">
-                          {profile.bio && (
-                            <p className="text-sm text-muted-foreground line-clamp-3">{profile.bio}</p>
-                          )}
+                        <CardContent>
+                          <p className="line-clamp-3">{article.content}</p>
                         </CardContent>
-                        <CardFooter className="flex justify-center pb-4">
-                          <Button onClick={() => navigate(`/profile/${profile.id}`)}>
-                            Ver Perfil
+                        <CardFooter>
+                          <Button variant="outline" onClick={() => navigate(`/blog/${article.id}`)}>
+                            Ler mais
                           </Button>
                         </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
           )}
 
           {isLoading && (
@@ -240,7 +154,7 @@ export default function SearchPage() {
             </div>
           )}
 
-          {!isLoading && articles.length === 0 && profiles.length === 0 && searchParams.get("q") && (
+          {!isLoading && articles.length === 0 && searchParams.get("q") && (
             <div className="text-center py-12">
               <p className="text-xl text-muted-foreground mb-2">Nenhum resultado encontrado</p>
               <p className="text-muted-foreground">Tente usar termos diferentes na sua pesquisa</p>

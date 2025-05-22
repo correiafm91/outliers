@@ -1,259 +1,251 @@
-
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { formatDistanceToNow } from "date-fns";
+import { Trash, Heart, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ThumbsUp, Trash } from "lucide-react";
-import { Badge, VerifiedBadge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
 
 export interface Comment {
   id: string;
+  content: string;
+  created_at: string;
   author: {
-    id?: string;
+    id: string;
     name: string;
     avatar: string;
   };
-  content: string;
-  created_at: string;
   likes: number;
 }
 
 interface CommentListProps {
   comments: Comment[];
-  onCommentDelete?: (id: string) => void;
-  articleId?: string; // Add article ID to refresh comments
+  onCommentDelete: (commentId: string) => void;
+  articleId: string;
 }
 
 export function CommentList({ comments, onCommentDelete, articleId }: CommentListProps) {
-  const [refreshKey, setRefreshKey] = useState(0);
-  
-  // Refresh component when articleId changes
+  const { user } = useAuth();
+  const [likingStates, setLikingStates] = useState<Record<string, boolean>>({});
+  const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (articleId) {
-      setRefreshKey(prev => prev + 1);
+    const initialLikedComments: Record<string, boolean> = {};
+    comments.forEach(comment => {
+      initialLikedComments[comment.id] = false;
+    });
+    setLikedComments(initialLikedComments);
+  }, [comments]);
+
+  const checkIfLiked = async (commentId: string) => {
+    if (!user) return false;
+    try {
+      const { data, error } = await supabase
+        .from("comment_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("comment_id", commentId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking if comment is liked:", error);
+        return false;
+      }
+      return !!data;
+    } catch (error) {
+      console.error("Error checking if comment is liked:", error);
+      return false;
     }
-  }, [articleId]);
+  };
+
+  const handleLikeComment = async (commentId: string, authorId: string) => {
+    if (!user) {
+      toast.error("Você precisa estar logado para curtir comentários");
+      return;
+    }
+
+    setLikingStates(prev => ({ ...prev, [commentId]: true }));
+
+    try {
+      const isCurrentlyLiked = likedComments[commentId] || await checkIfLiked(commentId);
+
+      if (isCurrentlyLiked) {
+        // Unlike comment
+        const { error } = await supabase
+          .from("comment_likes")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("comment_id", commentId);
+
+        if (error) throw error;
+
+        setLikedComments(prev => ({ ...prev, [commentId]: false }));
+        setComments(prevComments =>
+          prevComments.map(c =>
+            c.id === commentId ? { ...c, likes: Math.max(0, c.likes - 1) } : c
+          )
+        );
+      } else {
+        // Like comment
+        const { error } = await supabase
+          .from("comment_likes")
+          .insert({
+            user_id: user.id,
+            comment_id: commentId
+          });
+
+        if (error) throw error;
+
+        setLikedComments(prev => ({ ...prev, [commentId]: true }));
+        setComments(prevComments =>
+          prevComments.map(c =>
+            c.id === commentId ? { ...c, likes: (c.likes || 0) + 1 } : c
+          )
+        );
+
+        // Create notification for like (if not the author)
+        if (user.id !== authorId) {
+          try {
+            await supabase
+              .from("notifications")
+              .insert({
+                user_id: authorId,
+                actor_id: user.id,
+                type: 'comment_like',
+                article_id: articleId,
+                comment_id: commentId,
+                read: false
+              });
+          } catch (notifError) {
+            console.error("Error creating notification:", notifError);
+          }
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar curtida no comentário");
+    } finally {
+      setLikingStates(prev => ({ ...prev, [commentId]: false }));
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setDeletingCommentId(commentId);
+    try {
+      const { error: likeError } = await supabase
+        .from("comment_likes")
+        .delete()
+        .eq("comment_id", commentId);
+
+      if (likeError) throw likeError;
+
+      const { error } = await supabase
+        .from("comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) throw error;
+
+      onCommentDelete(commentId);
+      toast.success("Comentário excluído com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao excluir comentário:", error.message);
+      toast.error("Não foi possível excluir o comentário");
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
 
   if (comments.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">Ainda não há comentários. Seja o primeiro a comentar!</p>
+        <p className="text-muted-foreground">Ainda não há comentários nesta publicação.</p>
+        <p className="text-muted-foreground">Seja o primeiro a comentar!</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" key={refreshKey}>
+    <div className="space-y-6">
       {comments.map((comment) => (
-        <CommentItem 
-          key={comment.id} 
-          comment={comment} 
-          onDelete={onCommentDelete}
-        />
-      ))}
-    </div>
-  );
-}
-
-function CommentItem({ comment, onDelete }: { comment: Comment, onDelete?: (id: string) => void }) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(comment.likes || 0);
-  const { user } = useAuth();
-  
-  // Check if comment is liked by current user
-  useEffect(() => {
-    if (user && comment.id) {
-      checkIfLiked();
-    }
-  }, [user, comment.id]);
-  
-  const checkIfLiked = async () => {
-    try {
-      if (!user) return;
-      
-      const { data, error } = await supabase
-        .from('comment_likes')
-        .select('*')
-        .eq('comment_id', comment.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-        
-      if (error) throw error;
-      setIsLiked(!!data);
-    } catch (error) {
-      console.error("Error checking if comment is liked:", error);
-    }
-  };
-  
-  const handleLike = async () => {
-    if (!user) {
-      toast.error("Você precisa estar logado para curtir comentários");
-      return;
-    }
-    
-    try {
-      if (isLiked) {
-        // Remove like
-        await supabase
-          .from('comment_likes')
-          .delete()
-          .eq('comment_id', comment.id)
-          .eq('user_id', user.id);
-          
-        // Update comment likes count
-        await supabase
-          .from('comments')
-          .update({ likes: Math.max(0, likeCount - 1) })
-          .eq('id', comment.id);
-          
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
-      } else {
-        // Check if like already exists to prevent duplicate
-        const { data: existingLike } = await supabase
-          .from('comment_likes')
-          .select('id')
-          .eq('comment_id', comment.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        if (!existingLike) {
-          // Add like
-          await supabase
-            .from('comment_likes')
-            .insert({
-              comment_id: comment.id,
-              user_id: user.id
-            });
-            
-          // Update comment likes count
-          await supabase
-            .from('comments')
-            .update({ likes: likeCount + 1 })
-            .eq('id', comment.id);
-            
-          setIsLiked(true);
-          setLikeCount(prev => prev + 1);
-        } else {
-          // Like already exists, just update UI
-          setIsLiked(true);
-        }
-      }
-    } catch (error) {
-      console.error("Error toggling comment like:", error);
-      toast.error("Erro ao curtir comentário");
-    }
-  };
-  
-  const handleDelete = async () => {
-    try {
-      // First, delete all comment likes to avoid foreign key constraint violations
-      await supabase
-        .from('comment_likes')
-        .delete()
-        .eq('comment_id', comment.id);
-        
-      // Then delete the comment
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', comment.id);
-      
-      if (error) throw error;
-      
-      toast.success("Comentário excluído com sucesso");
-      if (onDelete) onDelete(comment.id);
-    } catch (error: any) {
-      console.error("Erro ao excluir comentário:", error.message);
-      toast.error("Falha ao excluir comentário");
-    }
-  };
-
-  // Verificar se o usuário é o autor ou se é um administrador
-  const canDelete = user && (user.id === comment.author.id || user.email === "admin@example.com");
-  const isVerified = comment.author.name === "Outliers Oficial";
-  
-  const formattedDate = formatDistanceToNow(new Date(comment.created_at), { 
-    addSuffix: true,
-    locale: ptBR
-  });
-
-  return (
-    <div className="p-4 bg-secondary/10 rounded-lg">
-      <div className="flex items-start gap-4">
-        <Link to={comment.author.id ? `/profile/${comment.author.id}` : "#"}>
-          <Avatar>
-            <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-            <AvatarFallback>
-              {comment.author.name ? comment.author.name.slice(0, 2).toUpperCase() : "??"}
-            </AvatarFallback>
+        <div key={comment.id} className="flex gap-4">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={comment.author.avatar} />
+            <AvatarFallback>{comment.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
-        </Link>
-        
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center flex-wrap">
-              <Link to={comment.author.id ? `/profile/${comment.author.id}` : "#"} className="hover:underline">
-                <h4 className="font-medium">{comment.author.name}</h4>
-              </Link>
-              {isVerified && (
-                <VerifiedBadge className="ml-1" />
-              )}
-              <p className="text-xs text-muted-foreground ml-2">{formattedDate}</p>
-            </div>
-            
-            {canDelete && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-destructive">
-                    <Trash className="h-4 w-4" />
-                    <span className="sr-only">Excluir comentário</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
+          
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium">{comment.author.name}</span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  {format(new Date(comment.created_at), "d 'de' MMM 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+              
+              {user && user.id === comment.author.id && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 text-destructive">
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
                     <AlertDialogTitle>Excluir comentário</AlertDialogTitle>
                     <AlertDialogDescription>
                       Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDeleteComment(comment.id)}
+                        disabled={deletingCommentId === comment.id}
+                      >
+                        {deletingCommentId === comment.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Excluindo...
+                          </>
+                        ) : (
+                          "Excluir"
+                        )}
+                      </AlertDialogAction>
+                    </div>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            
+            <p className="text-sm">{comment.content}</p>
+            
+            {user && (
+              <div className="flex items-center mt-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`h-8 px-2 ${likedComments[comment.id] ? 'text-red-500' : ''}`}
+                  onClick={() => handleLikeComment(comment.id, comment.author.id)}
+                  disabled={likingStates[comment.id]}
+                >
+                  <Heart className={`h-4 w-4 mr-1 ${likedComments[comment.id] ? 'fill-current' : ''}`} />
+                  <span className="text-xs">{comment.likes > 0 ? comment.likes : ''}</span>
+                </Button>
+              </div>
             )}
           </div>
-          
-          <div className="mt-2">
-            <p className="text-sm">{comment.content}</p>
-          </div>
-          
-          <div className="mt-4 flex items-center">
-            <Button variant="ghost" size="sm" onClick={handleLike} className={isLiked ? "text-primary" : ""}>
-              <ThumbsUp className={`mr-1 h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-              <span>{likeCount}</span>
-            </Button>
-          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

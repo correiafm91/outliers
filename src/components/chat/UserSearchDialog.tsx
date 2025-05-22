@@ -1,75 +1,75 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Profile } from '@/types/profile';
+import { Article } from '@/types/profile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Search, UserPlus } from 'lucide-react';
+import { Loader2, Search, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface UserSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectUser: (user: Profile) => void;
+  onSelectUser?: (user: any) => void;
 }
 
-export function UserSearchDialog({ open, onOpenChange, onSelectUser }: UserSearchDialogProps) {
+export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<Profile[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open && searchQuery) {
-      searchUsers();
+      searchArticles();
     }
   }, [searchQuery, open]);
 
-  const searchUsers = async () => {
+  const searchArticles = async () => {
     if (!searchQuery.trim()) {
-      setUsers([]);
+      setArticles([]);
       return;
     }
 
     setLoading(true);
     try {
+      // Only search for Outliers publications
       const { data, error } = await supabase
-        .from('profiles')
+        .from('articles')
         .select('*')
-        .ilike('username', `%${searchQuery}%`)
-        .neq('id', user?.id || '')
+        .ilike('title', `%${searchQuery}%`)
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;
 
-      setUsers(data as Profile[]);
+      setArticles(data as Article[]);
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('Error searching articles:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectUser = (selectedUser: Profile) => {
-    onSelectUser(selectedUser);
+  const handleSelectArticle = (articleId: string) => {
+    navigate(`/blog/${articleId}`);
     onOpenChange(false);
     setSearchQuery('');
-    setUsers([]);
+    setArticles([]);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nova Conversa</DialogTitle>
+          <DialogTitle>Pesquisar Publicações</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Pesquisar usuários..."
+            placeholder="Pesquisar publicações..."
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -81,27 +81,21 @@ export function UserSearchDialog({ open, onOpenChange, onSelectUser }: UserSearc
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : users.length > 0 ? (
-            users.map((user) => (
+          ) : articles.length > 0 ? (
+            articles.map((article) => (
               <Button
-                key={user.id}
+                key={article.id}
                 variant="ghost"
                 className="w-full justify-start px-2 py-6"
-                onClick={() => handleSelectUser(user)}
+                onClick={() => handleSelectArticle(article.id)}
               >
-                <Avatar className="h-9 w-9 mr-3">
-                  <AvatarImage src={user.avatar_url || ''} alt={user.username} />
-                  <AvatarFallback>
-                    {user.username.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="truncate">{user.username}</span>
-                <UserPlus className="ml-auto h-4 w-4 text-muted-foreground" />
+                <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
+                <span className="truncate">{article.title}</span>
               </Button>
             ))
           ) : searchQuery ? (
             <p className="text-center text-muted-foreground p-4">
-              Nenhum usuário encontrado
+              Nenhuma publicação encontrada
             </p>
           ) : null}
         </div>

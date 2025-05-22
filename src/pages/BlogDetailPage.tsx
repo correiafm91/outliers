@@ -26,7 +26,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel
 } from "@/components/ui/alert-dialog";
-import { Link } from "react-router-dom";
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -249,17 +248,13 @@ export default function BlogDetailPage() {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Link to={`/profile/${author.id}`}>
-                  <Avatar>
-                    <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
-                    <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Link>
+                <Avatar>
+                  <AvatarImage src={author.avatar_url || undefined} alt={author.username} />
+                  <AvatarFallback>{author.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
                 <div className="flex items-center">
-                  <Link to={`/profile/${author.id}`} className="hover:underline">
-                    <p className="font-medium">{author.username}</p>
-                  </Link>
-                  {author.username === "Outliers Oficial" && (
+                  <p className="font-medium">{author.username}</p>
+                  {author.username === "Outliers Ofc" && (
                     <VerifiedBadge className="ml-1" />
                   )}
                   <p className="text-sm text-muted-foreground ml-2">{publishedDate}</p>
@@ -341,22 +336,7 @@ export default function BlogDetailPage() {
             <Badge variant="outline">{article.sector}</Badge>
           </div>
           
-          <div className="flex items-center justify-between border-t border-b border-border py-6 mb-10">
-            <div className="flex items-center space-x-4">
-              <span className="text-muted-foreground">Compartilhar:</span>
-              <ShareButton 
-                title={article.title}
-                id={article.id}
-                type="article"
-              />
-            </div>
-            <div className="flex items-center space-x-4">
-              <LikeButton articleId={article.id} authorId={article.author_id} showCount />
-              <SaveArticleButton articleId={article.id} size="default">
-                Salvar
-              </SaveArticleButton>
-            </div>
-          </div>
+          {/* Removed duplicate like/save buttons */}
           
           <section className="border-t border-border pt-10">
             <h2 className="text-2xl font-bold mb-6">Comentários</h2>
