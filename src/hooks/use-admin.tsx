@@ -2,11 +2,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useAdmin() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
-  // For simplicity, we'll consider all authenticated users as admins for now
-  // In a production app, you'd check against a specific list of admin user IDs or roles
-  const isAdmin = Boolean(user);
+  // Only consider the Outliers Ofc official profile as admin
+  const isAdmin = Boolean(user && profile?.username === "Outliers Ofc");
   
   return { isAdmin };
 }

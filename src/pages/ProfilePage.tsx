@@ -436,7 +436,8 @@ export default function ProfilePage() {
     );
   }
 
-  const isVerified = profile.username === "Outliers Ofc" || profile.username === "Outliers Oficial";
+  // Update the isVerified check to only apply to Outliers Ofc
+  const isVerified = profile?.username === "Outliers Ofc";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

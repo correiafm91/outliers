@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -7,26 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilePlus, FileEdit, Settings, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/use-admin";
 import { toast } from "sonner";
 
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   
-  // Check if user is admin - we'll define admin based on specific user IDs
-  // This is a simple approach until we implement proper roles
-  const isAdmin = Boolean(user && [
-    // Add admin user IDs here - for now we'll consider all logged in users as admins
-    // for testing purposes
-  ].includes(user.id) || user);
-
   useEffect(() => {
     if (!user) {
       toast.error("Você precisa estar logado para acessar o painel de administração");
       navigate("/auth");
       return;
     }
-  }, [user, navigate]);
+    
+    if (!isAdmin) {
+      toast.error("Você não tem permissão para acessar o painel de administração");
+      navigate("/");
+      return;
+    }
+  }, [user, isAdmin, navigate]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
