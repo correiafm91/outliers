@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -336,10 +335,10 @@ export const supabase = createClient<ExtendedDatabase>(SUPABASE_URL, SUPABASE_PU
   }
 });
 
-// Create storage buckets if they don't exist
+// Improved function to check and create storage buckets if they don't exist
 const ensureStorageBuckets = async () => {
   try {
-    // Check if profiles bucket exists
+    // Check if buckets exist
     const { data: buckets, error } = await supabase.storage.listBuckets();
     
     if (error) {
@@ -347,34 +346,26 @@ const ensureStorageBuckets = async () => {
       return;
     }
     
-    const profilesBucketExists = buckets.some(bucket => bucket.name === 'profiles');
-    const imagesBucketExists = buckets.some(bucket => bucket.name === 'images');
-    const videosBucketExists = buckets.some(bucket => bucket.name === 'videos');
-    const groupsBucketExists = buckets.some(bucket => bucket.name === 'groups');
+    const existingBuckets = new Map();
+    buckets?.forEach(bucket => existingBuckets.set(bucket.name, true));
     
-    // Store buckets creation promises
-    const createBucketsPromises = [];
+    // Define required buckets with their size limits
+    const requiredBuckets = [
+      { name: 'profiles', sizeLimit: 5 },  // 5MB
+      { name: 'images', sizeLimit: 10 },   // 10MB
+      { name: 'videos', sizeLimit: 30 },   // 30MB
+      { name: 'groups', sizeLimit: 10 }    // 10MB
+    ];
     
-    if (!profilesBucketExists) {
-      createBucketsPromises.push(createBucket('profiles', 5));
+    // Create missing buckets
+    for (const bucket of requiredBuckets) {
+      if (!existingBuckets.has(bucket.name)) {
+        console.log(`Creating missing bucket: ${bucket.name}`);
+        await createBucket(bucket.name, bucket.sizeLimit);
+      }
     }
     
-    if (!imagesBucketExists) {
-      createBucketsPromises.push(createBucket('images', 10));
-    }
-    
-    if (!videosBucketExists) {
-      createBucketsPromises.push(createBucket('videos', 30));
-    }
-
-    if (!groupsBucketExists) {
-      createBucketsPromises.push(createBucket('groups', 10));
-    }
-    
-    // Execute all bucket creation operations
-    if (createBucketsPromises.length > 0) {
-      await Promise.allSettled(createBucketsPromises);
-    }
+    console.log("Storage buckets check completed");
   } catch (error) {
     console.error("Error setting up storage buckets:", error);
   }
@@ -401,6 +392,31 @@ const createBucket = async (name: string, sizeLimit: number) => {
   }
 };
 
+// Function to check if a bucket exists and is accessible
+export const checkBucketExists = async (bucketName: string): Promise<boolean> => {
+  try {
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error(`Error checking if bucket ${bucketName} exists:`, error.message);
+      return false;
+    }
+    
+    const exists = buckets.some(bucket => bucket.name === bucketName);
+    
+    // If bucket doesn't exist, try to create it
+    if (!exists) {
+      const sizeLimit = bucketName === 'videos' ? 30 : 10; // 30MB for videos, 10MB for others
+      return await createBucket(bucketName, sizeLimit);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error checking if bucket ${bucketName} exists:`, error);
+    return false;
+  }
+};
+
 // Function to ensure unique constraints on likes table
 const ensureUniqueConstraints = async () => {
   try {
@@ -414,23 +430,6 @@ const ensureUniqueConstraints = async () => {
     }
   } catch (e) {
     console.error("Error ensuring unique constraints:", e);
-  }
-};
-
-// Function to check if a bucket exists and is accessible
-export const checkBucketExists = async (bucketName: string): Promise<boolean> => {
-  try {
-    const { data: buckets, error } = await supabase.storage.listBuckets();
-    
-    if (error) {
-      console.error(`Error checking if bucket ${bucketName} exists:`, error.message);
-      return false;
-    }
-    
-    return buckets.some(bucket => bucket.name === bucketName);
-  } catch (error) {
-    console.error(`Error checking if bucket ${bucketName} exists:`, error);
-    return false;
   }
 };
 

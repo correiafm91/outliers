@@ -34,25 +34,52 @@ export default function NewArticlePage() {
   });
 
   useEffect(() => {
+    if (!user) {
+      toast.error("Você precisa estar logado para criar um artigo");
+      navigate("/auth");
+      return;
+    }
+
     checkStorageBuckets();
-  }, []);
+  }, [user, navigate]);
 
   const checkStorageBuckets = async () => {
-    const imagesExists = await checkBucketExists('images');
-    const videosExists = await checkBucketExists('videos');
-    
-    setBucketsAvailable({
-      images: imagesExists,
-      videos: videosExists
-    });
-    
-    setBucketsChecked(true);
-    
-    if (!imagesExists || !videosExists) {
-      toast.warning(
-        "Atenção: Alguns recursos de armazenamento podem não estar disponíveis no momento.",
-        { duration: 6000 }
-      );
+    try {
+      // Force creation of buckets if they don't exist
+      const imagesExists = await checkBucketExists('images');
+      const videosExists = await checkBucketExists('videos');
+      
+      setBucketsAvailable({
+        images: imagesExists,
+        videos: videosExists
+      });
+      
+      setBucketsChecked(true);
+      
+      if (!imagesExists || !videosExists) {
+        toast.warning(
+          "Atenção: Alguns recursos de armazenamento podem não estar disponíveis no momento. Estamos tentando corrigir o problema automaticamente.",
+          { duration: 6000 }
+        );
+        
+        // Try one more time after a short delay
+        setTimeout(async () => {
+          const imagesExistsRetry = await checkBucketExists('images');
+          const videosExistsRetry = await checkBucketExists('videos');
+          
+          setBucketsAvailable({
+            images: imagesExistsRetry,
+            videos: videosExistsRetry
+          });
+          
+          if (imagesExistsRetry && videosExistsRetry) {
+            toast.success("Recursos de armazenamento disponíveis agora!");
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar buckets:", error);
+      toast.error("Erro ao verificar recursos de armazenamento");
     }
   };
 
@@ -114,12 +141,10 @@ export default function NewArticlePage() {
       let videoUrl = null;
       
       if (imageFile) {
-        if (!bucketsAvailable.images) {
-          // Re-check if the bucket exists
-          const exists = await checkBucketExists('images');
-          if (!exists) {
-            throw new Error("O sistema de armazenamento de imagens não está disponível no momento");
-          }
+        // Force check/create bucket before upload
+        const imagesExists = await checkBucketExists('images');
+        if (!imagesExists) {
+          throw new Error("O sistema de armazenamento de imagens não está disponível no momento. Tente novamente em alguns minutos.");
         }
         
         const fileExt = imageFile.name.split('.').pop();
@@ -131,6 +156,7 @@ export default function NewArticlePage() {
           .upload(filePath, imageFile);
 
         if (uploadError) {
+          console.error("Erro de upload:", uploadError);
           if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
             throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
           }
@@ -145,12 +171,10 @@ export default function NewArticlePage() {
       }
       
       if (videoFile) {
-        if (!bucketsAvailable.videos) {
-          // Re-check if the bucket exists
-          const exists = await checkBucketExists('videos');
-          if (!exists) {
-            throw new Error("O sistema de armazenamento de vídeos não está disponível no momento");
-          }
+        // Force check/create bucket before upload
+        const videosExists = await checkBucketExists('videos');
+        if (!videosExists) {
+          throw new Error("O sistema de armazenamento de vídeos não está disponível no momento. Tente novamente em alguns minutos.");
         }
         
         const fileExt = videoFile.name.split('.').pop();
@@ -162,6 +186,7 @@ export default function NewArticlePage() {
           .upload(filePath, videoFile);
 
         if (uploadError) {
+          console.error("Erro de upload:", uploadError);
           if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
             throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
           }
@@ -221,7 +246,7 @@ export default function NewArticlePage() {
               {bucketsChecked && (!bucketsAvailable.images || !bucketsAvailable.videos) && (
                 <div className="p-3 bg-yellow-50 text-yellow-800 rounded-md flex items-center gap-2 text-sm">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Alguns recursos de armazenamento podem estar indisponíveis. Você ainda pode criar uma publicação sem mídia.</span>
+                  <span>Alguns recursos de armazenamento podem estar indisponíveis. Você ainda pode criar uma publicação sem mídia ou tentar novamente mais tarde.</span>
                 </div>
               )}
 
