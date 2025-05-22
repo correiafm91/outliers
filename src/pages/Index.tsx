@@ -9,12 +9,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Article, Profile } from "@/types/profile";
 import { Loader2 } from "lucide-react";
 import { BlogCard } from "@/components/blog/BlogCard";
+import { useAdmin } from "@/hooks/use-admin";
+import { toast } from "sonner";
 
 export default function Index() {
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
   const [recentArticles, setRecentArticles] = useState<Article[]>([]);
   const [authorProfiles, setAuthorProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     fetchArticles();
@@ -24,7 +27,7 @@ export default function Index() {
     try {
       setLoading(true);
       
-      // Buscar artigos recentes
+      // Fetch recent articles
       const { data: articles, error } = await supabase
         .from('articles')
         .select('*')
@@ -34,17 +37,17 @@ export default function Index() {
       if (error) throw error;
       
       if (articles && articles.length > 0) {
-        // Separar artigos em destaque (3 primeiros) e recentes (4 seguintes)
+        // Split articles into featured (3 first) and recent (4 next)
         const featured = articles.slice(0, 3);
         const recent = articles.slice(3, 7);
         
         setFeaturedArticles(featured as Article[]);
         setRecentArticles(recent as Article[]);
         
-        // Obter IDs de autores únicos
+        // Get unique author IDs
         const authorIds = Array.from(new Set([...featured, ...recent].map(article => article.author_id)));
         
-        // Buscar perfis de autores
+        // Fetch author profiles
         if (authorIds.length > 0) {
           const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
@@ -53,7 +56,7 @@ export default function Index() {
             
           if (profilesError) throw profilesError;
           
-          // Criar mapa de perfis por ID
+          // Create profile map by ID
           const profileMap: Record<string, Profile> = {};
           profiles?.forEach(profile => {
             profileMap[profile.id] = profile;
@@ -63,10 +66,18 @@ export default function Index() {
         }
       }
     } catch (error) {
-      console.error('Erro ao buscar artigos:', error);
+      console.error('Error fetching articles:', error);
+      toast.error('Erro ao carregar artigos');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getExcerpt = (content: string): string => {
+    // Remove HTML tags if present
+    const plainText = content.replace(/<[^>]*>?/gm, '');
+    // Return first 150 characters
+    return plainText.length > 150 ? plainText.substring(0, 150) + '...' : plainText;
   };
 
   return (
@@ -78,13 +89,26 @@ export default function Index() {
         <section className="py-16 md:py-24 px-4">
           <div className="container mx-auto">
             <div className="flex flex-col items-center text-center mb-16 animate-once animate-fade-in">
-              <h1 className="heading-xl max-w-3xl mb-6">Novidades de hoje</h1>
-              <Button size="lg" asChild>
-                <Link to="/blogs">
-                  Explorar Artigos
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              <h1 className="heading-xl max-w-3xl mb-6">Blog Platform</h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mb-8">
+                Fique atualizado com os últimos artigos e novidades
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Button size="lg" asChild>
+                  <Link to="/blog">
+                    Todos os Artigos
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                
+                {isAdmin && (
+                  <Button size="lg" variant="outline" asChild>
+                    <Link to="/admin">
+                      Painel de Admin
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
             
             {/* Featured Posts */}
@@ -101,15 +125,16 @@ export default function Index() {
                       <BlogCard post={{
                         id: article.id,
                         title: article.title,
-                        excerpt: article.excerpt || "",
+                        excerpt: article.excerpt || getExcerpt(article.content),
                         content: article.content,
                         author: {
-                          name: author?.username || "Autor desconhecido",
+                          name: author?.username || "Autor Desconhecido",
                           avatar: author?.avatar_url || ""
                         },
                         published_at: article.created_at,
                         category: article.sector || "Geral",
-                        image: article.image_url || "",
+                        image: article.image_url || "/placeholder.svg",
+                        video_url: article.video_url || undefined,
                         likes: 0,
                         comments: 0,
                         aspect_ratio: article.aspect_ratio
@@ -121,9 +146,11 @@ export default function Index() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">Nenhum artigo em destaque encontrado.</p>
-                <Button variant="link" asChild className="mt-2">
-                  <Link to="/new-article">Criar um artigo</Link>
-                </Button>
+                {isAdmin && (
+                  <Button variant="link" asChild className="mt-2">
+                    <Link to="/admin/new-article">Criar um artigo</Link>
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -136,7 +163,7 @@ export default function Index() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="heading-lg animate-once animate-fade-in">Artigos Recentes</h2>
                 <Button variant="outline" asChild className="animate-once animate-fade-in">
-                  <Link to="/blogs">Ver Todos</Link>
+                  <Link to="/blog">Ver Todos</Link>
                 </Button>
               </div>
               
@@ -148,15 +175,16 @@ export default function Index() {
                       <BlogCard post={{
                         id: article.id,
                         title: article.title,
-                        excerpt: article.excerpt || "",
+                        excerpt: article.excerpt || getExcerpt(article.content),
                         content: article.content,
                         author: {
-                          name: author?.username || "Autor desconhecido",
+                          name: author?.username || "Autor Desconhecido",
                           avatar: author?.avatar_url || ""
                         },
                         published_at: article.created_at,
                         category: article.sector || "Geral",
-                        image: article.image_url || "",
+                        image: article.image_url || "/placeholder.svg",
+                        video_url: article.video_url || undefined,
                         likes: 0,
                         comments: 0,
                         aspect_ratio: article.aspect_ratio

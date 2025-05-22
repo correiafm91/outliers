@@ -1,3 +1,6 @@
+
+import { Profile } from "@/types/profile";
+
 export type MemberRole = 'owner' | 'admin' | 'member';
 
 export interface Group {
@@ -53,4 +56,20 @@ export interface DirectMessage {
   is_deleted: boolean;
   sender?: Profile;
   receiver?: Profile;
+}
+
+export interface JoinRequest {
+  id: string;
+  group_id: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  profile: Profile;
+}
+
+export interface ChatConversation {
+  profile: Profile;
+  last_message: DirectMessage | null;
+  unread_count: number;
 }

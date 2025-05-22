@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/use-admin";
 import { Navbar } from "@/components/layout/Navbar";
 import { supabase, checkBucketExists } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,10 @@ type AspectRatioType = "16:9" | "4:3" | "1:1" | "3:2";
 export default function NewArticlePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [excerpt, setExcerpt] = useState("");
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("16:9");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -34,52 +37,38 @@ export default function NewArticlePage() {
   });
 
   useEffect(() => {
+    // Check if user is logged in and is admin
     if (!user) {
-      toast.error("Você precisa estar logado para criar um artigo");
+      toast.error("Você precisa estar logado para criar artigos");
       navigate("/auth");
       return;
     }
 
+    if (!isAdmin) {
+      toast.error("Apenas administradores podem criar artigos");
+      navigate("/");
+      return;
+    }
+
     checkStorageBuckets();
-  }, [user, navigate]);
+  }, [user, isAdmin, navigate]);
 
   const checkStorageBuckets = async () => {
-    try {
-      // Force creation of buckets if they don't exist
-      const imagesExists = await checkBucketExists('images');
-      const videosExists = await checkBucketExists('videos');
-      
-      setBucketsAvailable({
-        images: imagesExists,
-        videos: videosExists
-      });
-      
-      setBucketsChecked(true);
-      
-      if (!imagesExists || !videosExists) {
-        toast.warning(
-          "Atenção: Alguns recursos de armazenamento podem não estar disponíveis no momento. Estamos tentando corrigir o problema automaticamente.",
-          { duration: 6000 }
-        );
-        
-        // Try one more time after a short delay
-        setTimeout(async () => {
-          const imagesExistsRetry = await checkBucketExists('images');
-          const videosExistsRetry = await checkBucketExists('videos');
-          
-          setBucketsAvailable({
-            images: imagesExistsRetry,
-            videos: videosExistsRetry
-          });
-          
-          if (imagesExistsRetry && videosExistsRetry) {
-            toast.success("Recursos de armazenamento disponíveis agora!");
-          }
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Erro ao verificar buckets:", error);
-      toast.error("Erro ao verificar recursos de armazenamento");
+    const imagesExists = await checkBucketExists('images');
+    const videosExists = await checkBucketExists('videos');
+    
+    setBucketsAvailable({
+      images: imagesExists,
+      videos: videosExists
+    });
+    
+    setBucketsChecked(true);
+    
+    if (!imagesExists || !videosExists) {
+      toast.warning(
+        "Alguns recursos de armazenamento podem não estar disponíveis no momento.",
+        { duration: 6000 }
+      );
     }
   };
 
@@ -89,7 +78,7 @@ export default function NewArticlePage() {
       
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("A imagem deve ter no máximo 5MB");
+        toast.error("A imagem deve ter menos de 5MB");
         return;
       }
       
@@ -107,7 +96,7 @@ export default function NewArticlePage() {
       
       // Check file size (max 30MB)
       if (file.size > 30 * 1024 * 1024) {
-        toast.error("O vídeo deve ter no máximo 30MB");
+        toast.error("O vídeo deve ter menos de 30MB");
         return;
       }
       
@@ -123,13 +112,13 @@ export default function NewArticlePage() {
     e.preventDefault();
     
     if (!user) {
-      toast.error("Você precisa estar logado para criar uma publicação");
+      toast.error("Você precisa estar logado para criar um artigo");
       navigate("/auth");
       return;
     }
 
     if (!title.trim() || !content.trim()) {
-      toast.error("Por favor preencha todos os campos obrigatórios");
+      toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
 
@@ -141,10 +130,12 @@ export default function NewArticlePage() {
       let videoUrl = null;
       
       if (imageFile) {
-        // Force check/create bucket before upload
-        const imagesExists = await checkBucketExists('images');
-        if (!imagesExists) {
-          throw new Error("O sistema de armazenamento de imagens não está disponível no momento. Tente novamente em alguns minutos.");
+        if (!bucketsAvailable.images) {
+          // Re-check if the bucket exists
+          const exists = await checkBucketExists('images');
+          if (!exists) {
+            throw new Error("O armazenamento de imagens não está disponível no momento");
+          }
         }
         
         const fileExt = imageFile.name.split('.').pop();
@@ -156,7 +147,6 @@ export default function NewArticlePage() {
           .upload(filePath, imageFile);
 
         if (uploadError) {
-          console.error("Erro de upload:", uploadError);
           if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
             throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
           }
@@ -171,10 +161,12 @@ export default function NewArticlePage() {
       }
       
       if (videoFile) {
-        // Force check/create bucket before upload
-        const videosExists = await checkBucketExists('videos');
-        if (!videosExists) {
-          throw new Error("O sistema de armazenamento de vídeos não está disponível no momento. Tente novamente em alguns minutos.");
+        if (!bucketsAvailable.videos) {
+          // Re-check if the bucket exists
+          const exists = await checkBucketExists('videos');
+          if (!exists) {
+            throw new Error("O armazenamento de vídeos não está disponível no momento");
+          }
         }
         
         const fileExt = videoFile.name.split('.').pop();
@@ -186,7 +178,6 @@ export default function NewArticlePage() {
           .upload(filePath, videoFile);
 
         if (uploadError) {
-          console.error("Erro de upload:", uploadError);
           if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
             throw new Error("Sistema de armazenamento indisponível. Tente novamente mais tarde.");
           }
@@ -206,10 +197,11 @@ export default function NewArticlePage() {
         .insert({
           title,
           content,
+          excerpt: excerpt || content.substring(0, 150) + "...",
           author_id: user.id,
           image_url: imageUrl,
           video_url: videoUrl,
-          sector: "other",
+          sector: "blog",
           aspect_ratio: mediaType === "image" ? aspectRatio : null
         })
         .select()
@@ -217,14 +209,18 @@ export default function NewArticlePage() {
 
       if (error) throw error;
       
-      toast.success("Publicação criada com sucesso!");
+      toast.success("Artigo criado com sucesso!");
       navigate(`/blog/${data.id}`);
     } catch (error: any) {
-      toast.error(error.message || "Erro ao criar publicação");
+      toast.error(error.message || "Erro ao criar artigo");
       console.error("Error during article creation:", error);
       setIsSubmitting(false);
     }
   };
+
+  if (!isAdmin) {
+    return null; // Don't render anything if not admin
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -232,21 +228,21 @@ export default function NewArticlePage() {
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
-            <CardTitle>Nova Publicação</CardTitle>
+            <CardTitle>Novo Artigo</CardTitle>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               {!bucketsChecked && (
                 <div className="p-3 bg-yellow-50 text-yellow-800 rounded-md flex items-center gap-2 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Verificando disponibilidade do sistema de armazenamento...</span>
+                  <span>Verificando disponibilidade de armazenamento...</span>
                 </div>
               )}
               
               {bucketsChecked && (!bucketsAvailable.images || !bucketsAvailable.videos) && (
                 <div className="p-3 bg-yellow-50 text-yellow-800 rounded-md flex items-center gap-2 text-sm">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Alguns recursos de armazenamento podem estar indisponíveis. Você ainda pode criar uma publicação sem mídia ou tentar novamente mais tarde.</span>
+                  <span>Alguns recursos de armazenamento podem não estar disponíveis. Você ainda pode criar um artigo sem mídia.</span>
                 </div>
               )}
 
@@ -256,9 +252,23 @@ export default function NewArticlePage() {
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Digite o título da sua publicação"
+                  placeholder="Digite o título do artigo"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="excerpt">Resumo</Label>
+                <Textarea
+                  id="excerpt"
+                  value={excerpt}
+                  onChange={(e) => setExcerpt(e.target.value)}
+                  placeholder="Digite um breve resumo (opcional)"
+                  className="h-24"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se deixado em branco, um resumo será gerado automaticamente a partir do conteúdo
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -296,7 +306,7 @@ export default function NewArticlePage() {
                     }}
                     className="flex items-center gap-2"
                   >
-                    Nenhuma mídia
+                    Sem mídia
                   </Button>
                 </div>
 
@@ -332,9 +342,9 @@ export default function NewArticlePage() {
                           <SelectValue placeholder="Escolha a proporção" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="16:9">16:9 (Panorâmica)</SelectItem>
+                          <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
                           <SelectItem value="4:3">4:3 (Padrão)</SelectItem>
-                          <SelectItem value="1:1">1:1 (Quadrada)</SelectItem>
+                          <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
                           <SelectItem value="3:2">3:2 (Retrato)</SelectItem>
                         </SelectContent>
                       </Select>
@@ -393,8 +403,8 @@ export default function NewArticlePage() {
                   id="content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Escreva o conteúdo da sua publicação"
-                  className="min-h-[200px]"
+                  placeholder="Escreva o conteúdo do artigo"
+                  className="min-h-[250px]"
                   required
                 />
               </div>
@@ -403,7 +413,7 @@ export default function NewArticlePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/admin")}
               >
                 Cancelar
               </Button>

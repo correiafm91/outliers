@@ -1,417 +1,311 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { 
-  Search, 
-  Menu, 
-  X, 
-  LucideIcon, 
-  User, 
-  LogOut, 
-  Bell, 
-  Settings,
-  BookMarked
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/use-admin";
 import { supabase } from "@/integrations/supabase/client";
+import { Menu, LogOut, User, FileEdit, Bookmark, Search, Home } from "lucide-react";
 
-interface NavbarProps {
-  transparent?: boolean;
-}
-
-export function Navbar({ transparent = false }: NavbarProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      setIsScrolled(scrollTop > 10);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+export function Navbar() {
+  const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (user) {
-      fetchNotifications();
+      fetchProfileData();
     }
   }, [user]);
 
-  const fetchNotifications = async () => {
+  const fetchProfileData = async () => {
     try {
       const { data, error } = await supabase
-        .from("notifications")
-        .select(`
-          *,
-          actor:profiles(username, avatar_url),
-          article:articles(title)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .from("profiles")
+        .select("*")
+        .eq("id", user?.id)
+        .single();
 
-      if (error) {
-        console.error("Error fetching notifications:", error);
-        return;
-      }
-
-      setNotifications(data || []);
-      
-      // Count unread notifications
-      const unread = data ? data.filter(n => !n.read).length : 0;
-      setUnreadCount(unread);
-    } catch (error: any) {
-      console.error("Error fetching notifications:", error.message);
-    }
-  };
-
-  const handleMarkAsRead = async (notificationId) => {
-    try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", notificationId);
-
-      if (error) {
-        console.error("Error marking notification as read:", error);
-        return;
-      }
-
-      fetchNotifications();
-    } catch (error: any) {
-      console.error("Error marking notification as read:", error.message);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
-
-      if (error) {
-        console.error("Error marking all notifications as read:", error);
-        return;
-      }
-
-      fetchNotifications();
-    } catch (error: any) {
-      console.error("Error marking all notifications as read:", error.message);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery("");
+      if (error) throw error;
+      setProfileData(data);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
     }
   };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
   };
 
-  const isVerified = profile?.username === "Outliers Oficial";
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 w-full border-b transition-colors",
-        isScrolled 
-          ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" 
-          : transparent 
-            ? "bg-transparent border-transparent"
-            : "bg-background"
-      )}
-    >
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-6 md:gap-10">
-          <Link to="/" className="hidden md:flex items-center space-x-2">
-            <span className="hidden font-bold sm:inline-block text-xl">
-              Networking Brasil
-            </span>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center">
+        <Link to="/" className="flex items-center">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">
+            Blog Platform
+          </h1>
+        </Link>
 
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden md:flex ml-6">
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <Link to="/" legacyBehavior passHref>
+                <NavigationMenuLink 
+                  className={navigationMenuTriggerStyle() + (location.pathname === "/" ? " bg-accent" : "")}
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Início
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            
+            <NavigationMenuItem>
+              <Link to="/blog" legacyBehavior passHref>
+                <NavigationMenuLink 
+                  className={navigationMenuTriggerStyle() + (location.pathname.startsWith("/blog") ? " bg-accent" : "")}
+                >
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  Blog
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            
+            <NavigationMenuItem>
+              <Link to="/search" legacyBehavior passHref>
+                <NavigationMenuLink 
+                  className={navigationMenuTriggerStyle() + (location.pathname === "/search" ? " bg-accent" : "")}
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Buscar
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            
+            {/* Admin link, only visible for admins */}
+            {isAdmin && (
+              <NavigationMenuItem>
+                <Link to="/admin" legacyBehavior passHref>
+                  <NavigationMenuLink 
+                    className={navigationMenuTriggerStyle() + (location.pathname.startsWith("/admin") ? " bg-accent text-accent-foreground" : "")}
+                  >
+                    Admin
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            )}
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        <div className="ml-auto flex items-center space-x-2">
+          {/* Search Button */}
+          <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
+            <Link to="/search">
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+            </Link>
           </Button>
 
-          {/* Desktop navigation */}
-          <div className="hidden md:flex">
-            <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <Link to="/blogs" className={navigationMenuTriggerStyle()}>
-                    Explorar
-                  </Link>
-                </NavigationMenuItem>
-                {user && (
-                  <NavigationMenuItem>
-                    <Link to="/saved" className={navigationMenuTriggerStyle()}>
-                      Salvos
-                    </Link>
-                  </NavigationMenuItem>
-                )}
-              </NavigationMenuList>
-            </NavigationMenu>
-          </div>
-        </div>
-
-        {/* Search bar */}
-        <div className="hidden md:flex mx-4 flex-1 max-w-md">
-          <form onSubmit={handleSearch} className="w-full">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Pesquisar..."
-                className="w-full pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </form>
-        </div>
-
-        {/* Auth and user menu */}
-        <div className="flex items-center gap-2">
-          {/* Mobile search button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => navigate("/search")}
-          >
-            <Search className="h-6 w-6" />
-          </Button>
-
+          {/* User Authentication */}
           {user ? (
-            <>
-              <Button 
-                variant="outline" 
-                className="hidden md:flex"
-                onClick={() => navigate("/new-article")}
-              >
-                Criar
-              </Button>
-
-              {/* Notifications dropdown */}
+            <div className="flex items-center gap-4">
+              <Link to="/saved" className="hidden md:block">
+                <Button variant="ghost" size="sm">
+                  <Bookmark className="mr-2 h-4 w-4" />
+                  Salvos
+                </Button>
+              </Link>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <div className="flex items-center justify-between px-4 py-2">
-                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-                    {unreadCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
-                        Marcar todas como lidas
-                      </Button>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      notifications.map((notification) => {
-                        const isActorVerified = notification.actor?.username === "Outliers Oficial";
-                        return (
-                          <DropdownMenuItem 
-                            key={notification.id}
-                            className={cn(
-                              "flex items-start p-3 cursor-pointer",
-                              !notification.read && "bg-muted/50"
-                            )}
-                            onClick={() => {
-                              if (!notification.read) {
-                                handleMarkAsRead(notification.id);
-                              }
-                              if (notification.article_id) {
-                                navigate(`/blog/${notification.article_id}`);
-                              } else if (notification.type === 'follow') {
-                                navigate(`/profile/${notification.actor_id}`);
-                              }
-                            }}
-                          >
-                            <Avatar className="h-8 w-8 mr-3 mt-1">
-                              <AvatarImage 
-                                src={notification.actor?.avatar_url || undefined} 
-                                alt={notification.actor?.username || "User"} 
-                              />
-                              <AvatarFallback>
-                                {notification.actor?.username?.slice(0, 2).toUpperCase() || "U"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm">
-                                <span className="font-medium">
-                                  {notification.actor?.username || "Alguém"}
-                                </span>
-                                {isActorVerified && (
-                                  <Badge variant="verified" className="ml-1 text-xs">Verificado</Badge>
-                                )}
-                                {notification.type === 'like' && ' curtiu sua publicação '}
-                                {notification.type === 'comment' && ' comentou em sua publicação '}
-                                {notification.type === 'follow' && ' começou a seguir você '}
-                                {notification.article && (
-                                  <span className="font-medium">
-                                    "{notification.article.title}"
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(notification.created_at).toLocaleDateString('pt-BR', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </p>
-                            </div>
-                          </DropdownMenuItem>
-                        );
-                      })
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-muted-foreground">
-                        Nenhuma notificação recente
-                      </div>
-                    )}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* User dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage 
-                        src={profile?.avatar_url || undefined} 
-                        alt={profile?.username || "User"} 
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={profileData?.avatar_url || ""}
+                        alt={profileData?.username || user.email}
                       />
                       <AvatarFallback>
-                        {profile?.username?.slice(0, 2).toUpperCase() || "U"}
+                        {profileData?.username?.charAt(0).toUpperCase() || 
+                          user.email?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <div className="flex items-center gap-2 px-2 pt-1">
-                    <DropdownMenuLabel>{profile?.username}</DropdownMenuLabel>
-                    {isVerified && <Badge variant="verified">Verificado</Badge>}
-                  </div>
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate(`/profile/${user.id}`)}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Perfil</span>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/profile/${user.id}`}>
+                      <User className="mr-2 h-4 w-4" />
+                      Perfil
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/saved")}>
-                    <BookMarked className="mr-2 h-4 w-4" />
-                    <span>Salvos</span>
+                  <DropdownMenuItem asChild>
+                    <Link to="/saved">
+                      <Bookmark className="mr-2 h-4 w-4" />
+                      Artigos Salvos
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Configurações</span>
-                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">
+                        <FileEdit className="mr-2 h-4 w-4" />
+                        Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
+                    Sair
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/auth">
-                <Button variant="outline" size="sm">Entrar</Button>
-              </Link>
-              <Link to="/auth?register=true">
-                <Button size="sm">Cadastrar</Button>
-              </Link>
             </div>
+          ) : (
+            <Button asChild className="hidden md:inline-flex">
+              <Link to="/auth">Entrar</Link>
+            </Button>
           )}
-        </div>
-      </div>
 
-      {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t">
-          <div className="container py-4 px-4 space-y-4">
-            <form onSubmit={handleSearch} className="w-full">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Pesquisar..."
-                  className="w-full pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </form>
-            <div className="space-y-1">
-              <Link to="/blogs" className="block py-2 px-3 rounded-md hover:bg-muted">
-                Explorar
-              </Link>
-              {user && (
-                <>
-                  <Link to="/saved" className="block py-2 px-3 rounded-md hover:bg-muted">
+          {/* Mobile Menu */}
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                className="md:hidden"
+                size="icon"
+              >
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-4 py-4">
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={closeMobileMenu}
+                  asChild
+                >
+                  <Link to="/">
+                    <Home className="mr-2 h-5 w-5" />
+                    Início
+                  </Link>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={closeMobileMenu}
+                  asChild
+                >
+                  <Link to="/blog">
+                    <FileEdit className="mr-2 h-5 w-5" />
+                    Blog
+                  </Link>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={closeMobileMenu}
+                  asChild
+                >
+                  <Link to="/search">
+                    <Search className="mr-2 h-5 w-5" />
+                    Buscar
+                  </Link>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={closeMobileMenu}
+                  asChild
+                >
+                  <Link to="/saved">
+                    <Bookmark className="mr-2 h-5 w-5" />
                     Salvos
                   </Link>
-                  <Link to="/new-article" className="block py-2 px-3 rounded-md hover:bg-muted">
-                    Criar publicação
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+                </Button>
+                
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={closeMobileMenu}
+                    asChild
+                  >
+                    <Link to="/admin">
+                      <FileEdit className="mr-2 h-5 w-5" />
+                      Admin
+                    </Link>
+                  </Button>
+                )}
+                
+                {user ? (
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      handleSignOut();
+                      closeMobileMenu();
+                    }}
+                  >
+                    <LogOut className="mr-2 h-5 w-5" />
+                    Sair
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default"
+                    className="justify-start"
+                    onClick={closeMobileMenu}
+                    asChild
+                  >
+                    <Link to="/auth">
+                      <User className="mr-2 h-5 w-5" />
+                      Entrar
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
-      )}
+      </div>
     </header>
   );
 }
