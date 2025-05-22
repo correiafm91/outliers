@@ -110,7 +110,7 @@ export function LikeButton({
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
       } else {
-        // Check if like already exists to prevent duplicate key error
+        // Add like
         const { data: existingLike } = await supabase
           .from("likes")
           .select("id")
@@ -154,7 +154,7 @@ export function LikeButton({
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Error updating like");
+      toast.error(error.message || "Erro ao atualizar curtida");
     } finally {
       setIsLoading(false);
     }

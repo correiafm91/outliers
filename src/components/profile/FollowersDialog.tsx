@@ -24,6 +24,7 @@ interface FollowersDialogProps {
   userId: string;
   followers: number;
   following: number;
+  username?: string;
   trigger?: React.ReactNode;
   defaultTab?: 'followers' | 'following';
 }
@@ -32,6 +33,7 @@ export function FollowersDialog({
   userId,
   followers,
   following,
+  username,
   trigger,
   defaultTab = 'followers'
 }: FollowersDialogProps) {
@@ -108,6 +110,11 @@ export function FollowersDialog({
     }
   };
 
+  // Don't allow followers dialog for Outliers profile
+  if (username === "Outliers Ofc") {
+    return null;
+  }
+
   return (
     <Dialog onOpenChange={(open) => {
       if (open) {
@@ -160,10 +167,11 @@ export function FollowersDialog({
                         <p className="font-medium">{follower.follower_profile?.username || 'Usuário'}</p>
                       </div>
                     </Link>
-                    {user && follower.follower_id !== user.id && (
+                    {user && follower.follower_id !== user.id && follower.follower_profile?.username !== "Outliers Ofc" && (
                       <FollowButton 
                         userId={user.id} 
                         targetUserId={follower.follower_id} 
+                        targetUsername={follower.follower_profile?.username}
                         variant="outline"
                         size="sm"
                       />
@@ -201,10 +209,11 @@ export function FollowersDialog({
                         <p className="font-medium">{following.following_profile?.username || 'Usuário'}</p>
                       </div>
                     </Link>
-                    {user && following.following_id !== user.id && (
+                    {user && following.following_id !== user.id && following.following_profile?.username !== "Outliers Ofc" && (
                       <FollowButton 
                         userId={user.id} 
                         targetUserId={following.following_id} 
+                        targetUsername={following.following_profile?.username}
                         variant="outline"
                         size="sm"
                       />

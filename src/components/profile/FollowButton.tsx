@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 interface FollowButtonProps {
   userId: string;
   targetUserId: string;
+  targetUsername?: string;
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
   onFollowStateChange?: (isFollowing: boolean) => void;
@@ -17,6 +18,7 @@ interface FollowButtonProps {
 export function FollowButton({
   userId,
   targetUserId,
+  targetUsername,
   variant = 'default',
   size = 'default',
   onFollowStateChange
@@ -59,6 +61,12 @@ export function FollowButton({
   const toggleFollow = async () => {
     if (!user) {
       toast.error("Você precisa estar logado para seguir usuários");
+      return;
+    }
+
+    // Don't allow following Outliers profile
+    if (targetUsername === "Outliers Ofc") {
+      toast.info("Não é possível seguir o perfil oficial Outliers");
       return;
     }
 
@@ -119,8 +127,8 @@ export function FollowButton({
     }
   };
 
-  // Don't show the button if it's the same user
-  if (userId === targetUserId) {
+  // Don't show the button if it's the same user or if the target is Outliers
+  if (userId === targetUserId || targetUsername === "Outliers Ofc") {
     return null;
   }
 

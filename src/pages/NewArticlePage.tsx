@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -38,8 +39,8 @@ export default function NewArticlePage() {
         return;
       }
       
-      // Use a valid sector value from the allowed options
-      const validSector = sector === "blog" ? "other" : sector; // Fallback to "other" if "blog" is selected
+      // Convert sector to a valid type
+      const validSector = sector === "blog" ? "other" : sector;
       
       const { data, error } = await supabase
         .from('articles')
@@ -50,7 +51,7 @@ export default function NewArticlePage() {
           author_id: user.id,
           image_url: imageUrl,
           video_url: videoUrl,
-          sector: validSector, // Use the valid sector value
+          sector: validSector as "other" | "technology" | "marketing" | "gastronomy" | "education" | "finance" | "health" | "sports" | "entertainment",
           aspect_ratio: aspectRatio
         });
       

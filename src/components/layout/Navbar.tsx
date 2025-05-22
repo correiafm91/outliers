@@ -71,7 +71,7 @@ export function Navbar() {
       <div className="container flex h-16 items-center">
         <Link to="/" className="flex items-center">
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">
-            Blog Platform
+            Outliers
           </h1>
         </Link>
 
@@ -163,12 +163,6 @@ export function Navbar() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to={`/profile/${user.id}`}>
-                      <User className="mr-2 h-4 w-4" />
-                      Perfil
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/saved">
                       <Bookmark className="mr-2 h-4 w-4" />
